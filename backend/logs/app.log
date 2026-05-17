@@ -1,0 +1,74 @@
+[2026-05-11T22:46:58.336Z] [INFO] Server running on port 5000
+[2026-05-15T14:08:31.537Z] [INFO] Server running on port 5000
+[2026-05-16T21:17:36.044Z] [INFO] Server running on port 5000
+[2026-05-16T22:18:46.620Z] [ERROR] Error: Column count doesn't match value count at row 1
+[2026-05-16T22:23:30.119Z] [ERROR] Error: Column count doesn't match value count at row 1
+[2026-05-16T22:39:01.251Z] [ERROR] Error: Column count doesn't match value count at row 1
+[2026-05-16T22:40:27.425Z] [ERROR] Error: Column count doesn't match value count at row 1
+[2026-05-16T22:46:26.476Z] [ERROR] Error: Column count doesn't match value count at row 1
+[2026-05-17T07:22:11.541Z] [INFO] Server running on port 5000
+[2026-05-17T08:22:06.625Z] [INFO] Resident registered: bekele@gmail.com
+[2026-05-17T08:24:30.043Z] [INFO] Resident registered: bekele@gmail.com
+[2026-05-17T08:30:23.779Z] [INFO] Resident registered: bekele@gmail.com
+[2026-05-17T08:50:06.351Z] [INFO] Resident registered: bekele@gmail.com
+[2026-05-17T08:55:59.485Z] [INFO] Resident registered: bekele@gmail.com
+[2026-05-17T09:13:10.063Z] [INFO] Resident registered: bekele@gmail.com
+[2026-05-17T10:57:01.054Z] [INFO] Server running on port 5000
+[2026-05-17T11:14:07.485Z] [INFO] Resident registered: abebe@gmail.com
+[2026-05-17T11:19:41.689Z] [INFO] Resident registered: tigist@gmail.ocm
+[2026-05-17T11:23:54.223Z] [INFO] Resident registered: dawit@gmail.com
+[2026-05-17T11:25:41.709Z] [INFO] Resident registered: marta@gmail.com
+[2026-05-17T11:27:46.673Z] [INFO] Resident registered: yohannes@gmail.com
+[2026-05-17T11:30:25.287Z] [INFO] Resident registered: selamawit@gmail.com
+[2026-05-17T14:02:52.861Z] [INFO] Server running on port 5000
+[2026-05-17T14:08:59.666Z] [ERROR] Error: Column count doesn't match value count at row 1
+[2026-05-17T14:14:50.723Z] [ERROR] Error: Column count doesn't match value count at row 1
+[2026-05-17T14:32:58.745Z] [INFO] Server running on port 5000
+[2026-05-17T14:33:52.578Z] [ERROR] Error: Column count doesn't match value count at row 1
+[2026-05-17T14:35:50.234Z] [INFO] Server running on port 5000
+[2026-05-17T16:56:48.778Z] [INFO] Server running on port 5000
+[2026-05-17T16:58:21.411Z] [ERROR] Error: Column count doesn't match value count at row 1
+[2026-05-17T17:01:19.583Z] [INFO] Server running on port 5000
+[2026-05-17T17:02:08.681Z] [INFO] Admin 1 assigned task 1
+[2026-05-17T17:04:37.391Z] [INFO] Admin 1 assigned task 2
+[2026-05-17T17:05:54.368Z] [INFO] Admin 1 assigned task 3
+[2026-05-17T17:07:28.945Z] [INFO] Admin 1 assigned task 4
+[2026-05-17T17:08:51.474Z] [INFO] Admin 1 assigned task 5
+[2026-05-17T17:36:51.597Z] [INFO] Server running on port 5000
+[2026-05-17T17:39:59.076Z] [ERROR] Error: Column 'role' cannot be null
+[2026-05-17T17:41:30.423Z] [ERROR] Error: Column 'role' cannot be null
+[2026-05-17T17:47:00.935Z] [INFO] Server running on port 5000
+[2026-05-17T17:47:08.700Z] [ERROR] Error: Column 'role' cannot be null
+[2026-05-17T18:04:20.934Z] [ERROR] Error: Column 'role' cannot be null
+[2026-05-17T18:04:58.175Z] [INFO] Server running on port 5000
+[2026-05-17T18:06:21.389Z] [INFO] Server running on port 5000
+[2026-05-17T18:09:16.880Z] [INFO] Resident registered: bekanapeter@gmail.com
+[2026-05-17T19:34:53.894Z] [INFO] Certificate request 1 created by resident 7
+[2026-05-17T19:37:22.710Z] [INFO] Certificate request 2 created by resident 7
+[2026-05-17T19:38:52.872Z] [INFO] Certificate request 3 created by resident 7
+[2026-05-17T19:40:17.429Z] [INFO] Certificate request 4 created by resident 7
+[2026-05-17T20:20:05.666Z] [ERROR] TypeError: Cannot read properties of undefined (reading 'trim')
+[2026-05-17T20:20:14.183Z] [ERROR] TypeError: Cannot read properties of undefined (reading 'trim')
+[2026-05-17T20:20:22.401Z] [ERROR] TypeError: Cannot read properties of undefined (reading 'trim')
+[2026-05-17T20:38:34.688Z] [INFO] Server running on port 5000
+[2026-05-17T20:41:00.243Z] [INFO] Server running on port 5000
+[2026-05-17T20:52:10.238Z] [INFO] Server running on port 5000
+[2026-05-17T21:06:28.297Z] [INFO] Server running on port 5000
+[2026-05-17T21:23:14.075Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-17T21:23:14.110Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-17T21:26:44.404Z] [INFO] Certificate request 5 created by resident 7
+[2026-05-17T21:26:47.750Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-17T21:26:47.793Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-17T21:27:00.906Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-17T21:27:00.924Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-17T21:29:57.181Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-17T21:29:57.218Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-17T21:39:25.149Z] [INFO] Certificate request 6 created by resident 7
+[2026-05-17T21:47:28.424Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-17T21:47:28.431Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-17T21:48:45.748Z] [INFO] Server running on port 5000
+[2026-05-17T21:53:55.365Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-17T21:53:55.379Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-17T22:06:37.075Z] [INFO] Server running on port 5000
+[2026-05-17T22:07:09.897Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-17T22:07:09.914Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
