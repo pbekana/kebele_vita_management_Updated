@@ -2,6 +2,11 @@ const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
 const { pool } = require('../config/connectDB');
 const logger = require('../utils/logger');
+const {
+  logCertificateAudit,
+  notifyUser,
+  getResidentUserIdForCertificate,
+} = require('../services/certificateNotificationService');
 
 /**
  * Helper: Handle validation errors
@@ -217,25 +222,26 @@ const listUsers = async (req, res) => {
 
     let query = `
       SELECT 
-        id,
-        firstname,
-        lastname,
-        email,
-        role,
-        is_active,
-        created_at
-      FROM users
+        u.id,
+        r.firstname,
+        r.lastname,
+        u.email,
+        u.role,
+        u.is_active,
+        u.created_at
+      FROM users u
+      LEFT JOIN residents r ON r.user_id = u.id
     `;
 
     const params = [];
 
     if (role) {
-      query += ' WHERE role = ?';
+      query += ' WHERE u.role = ?';
       params.push(role);
     }
 
     query += `
-      ORDER BY created_at DESC
+      ORDER BY u.created_at DESC
       LIMIT ?
       OFFSET ?
     `;
@@ -308,6 +314,107 @@ const assignKebeleStaff = async (req, res) => {
 };
 
 /**
+ * PUT /api/admin/certificates/:id/assign
+ * Body: { staff_user_id: number }
+ */
+const assignCertificate = async (req, res) => {
+  const certificateId = Number(req.params.id);
+  const staffUserId = Number(req.body.staff_user_id);
+
+  if (!Number.isInteger(certificateId) || !Number.isInteger(staffUserId)) {
+    return res.status(400).json({
+      error: 'Valid certificate id and staff_user_id are required',
+    });
+  }
+
+  try {
+    const [certificates] = await pool.query(
+      `SELECT id, status, certificate_type
+       FROM certificates
+       WHERE id = ?
+       LIMIT 1`,
+      [certificateId]
+    );
+
+    if (certificates.length === 0) {
+      return res.status(404).json({ error: 'Certificate not found' });
+    }
+
+    const certificate = certificates[0];
+
+    if (certificate.status !== 'pending') {
+      return res.status(400).json({
+        error: `Only pending requests can be assigned (current: '${certificate.status}')`,
+      });
+    }
+
+    const [staffRows] = await pool.query(
+      `SELECT ks.user_id, ks.position
+       FROM kebele_staff ks
+       INNER JOIN users u ON ks.user_id = u.id
+       WHERE ks.user_id = ?
+         AND u.role = 'kebele_staff'
+         AND u.is_active = TRUE
+       LIMIT 1`,
+      [staffUserId]
+    );
+
+    if (staffRows.length === 0) {
+      return res.status(404).json({ error: 'Active staff member not found' });
+    }
+
+    const positionTypeMap = {
+      birth_officer: 'birth',
+      death_officer: 'death',
+      marriage_officer: 'marriage',
+    };
+
+    const expectedType = positionTypeMap[staffRows[0].position];
+
+    if (!expectedType || expectedType !== certificate.certificate_type) {
+      return res.status(400).json({
+        error: 'Staff position does not match this certificate type',
+      });
+    }
+
+    const [result] = await pool.query(
+      `UPDATE certificates
+       SET status = 'assigned',
+           assigned_staff_user_id = ?,
+           assigned_by_user_id = ?,
+           assigned_at = NOW()
+       WHERE id = ?
+         AND status = 'pending'`,
+      [staffUserId, req.user.id, certificateId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(409).json({ error: 'Certificate could not be assigned' });
+    }
+
+    await logCertificateAudit(
+      certificateId,
+      req.user.id,
+      'admin_assign',
+      String(staffUserId)
+    );
+
+    await notifyUser(
+      staffUserId,
+      'New certificate request assigned',
+      `You have been assigned certificate request #${certificateId}.`,
+      `/staff-dashboard`
+    );
+
+    logger.info(`Admin ${req.user.id} assigned certificate ${certificateId} to staff ${staffUserId}`);
+
+    return res.status(200).json({ message: 'Certificate assigned successfully' });
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
+/**
  * PUT /api/admin/certificates/:id/approve
  */
 const approveCertificate = async (req, res) => {
@@ -338,7 +445,7 @@ const approveCertificate = async (req, res) => {
 
     const certificate = certificates[0];
 
-    if (certificate.status !== 'in_review') {
+    if (certificate.status !== 'ready_for_approval') {
       return res.status(400).json({
         error: `Certificate status is '${certificate.status}', cannot approve`,
       });
@@ -349,9 +456,20 @@ const approveCertificate = async (req, res) => {
        SET 
          status = 'approved',
          approved_by = ?,
-         approved_at = NOW()
+         approved_at = NOW(),
+         rejection_reason = NULL
        WHERE id = ?`,
       [req.user.id, certificateId]
+    );
+
+    await logCertificateAudit(certificateId, req.user.id, 'admin_approve', null);
+
+    const residentUserId = await getResidentUserIdForCertificate(certificateId);
+    await notifyUser(
+      residentUserId,
+      'Certificate approved',
+      `Your certificate request #${certificateId} has been approved. You can download it from your dashboard.`,
+      `/resident-dashboard`
     );
 
     logger.info(
@@ -377,7 +495,7 @@ const getFeedback = async (req, res) => {
         f.id,
         f.response,
         f.created_at,
-        u.name AS resident_name,
+        CONCAT(r.firstname, ' ', r.lastname) AS resident_name,
         u.email AS resident_email
       FROM feedback f
       INNER JOIN residents r
@@ -486,27 +604,76 @@ const getStaffList = async (req, res) => {
 
 /**
  * GET /api/admin/certificates
- * Get certificates with status 'in_review'
+ * Query: queue=approval|assignment|all (default approval)
+ *        q, page, limit
  */
 const getCertificates = async (req, res) => {
   try {
+    const queue = (req.query.queue || 'approval').toLowerCase();
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = (page - 1) * limit;
+    const q = (req.query.q || '').trim();
+    const like = q ? `%${q}%` : null;
+
+    let statusClause = `c.status = 'ready_for_approval'`;
+    if (queue === 'assignment' || queue === 'pending') {
+      statusClause = `c.status = 'pending'`;
+    } else if (queue === 'in_progress' || queue === 'processing') {
+      statusClause = `c.status IN ('assigned', 'processing')`;
+    } else if (queue === 'all') {
+      statusClause = `c.status IN (
+        'pending','assigned','processing','ready_for_approval','approved','rejected','issued'
+      )`;
+    }
+
+    let where = statusClause;
+    const params = [];
+
+    if (like) {
+      where += ` AND (
+        r.firstname LIKE ? OR r.lastname LIKE ? OR r.phone_number LIKE ?
+        OR CAST(c.id AS CHAR) LIKE ?
+        OR IFNULL(c.child_name,'') LIKE ?
+        OR IFNULL(c.husband_name,'') LIKE ?
+        OR IFNULL(c.wife_name,'') LIKE ?
+      )`;
+      params.push(like, like, like, like, like, like, like);
+    }
+
+    const [countRows] = await pool.query(
+      `SELECT COUNT(*) AS total
+       FROM certificates c
+       INNER JOIN residents r ON c.resident_id = r.id
+       WHERE ${where}`,
+      params
+    );
+    const total = countRows[0]?.total || 0;
+
     const [certificates] = await pool.query(
       `SELECT 
         c.*,
         r.firstname AS resident_firstname,
         r.lastname AS resident_lastname,
-        r.phone_number AS resident_phone
+        r.phone_number AS resident_phone,
+        u.email AS assigned_staff_email
        FROM certificates c
        INNER JOIN residents r ON c.resident_id = r.id
-       WHERE c.status = 'in_review'
-       ORDER BY c.requested_at DESC`
+       LEFT JOIN users u ON c.assigned_staff_user_id = u.id
+       WHERE ${where}
+       ORDER BY c.requested_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
     );
 
     return res.status(200).json({
       count: certificates.length,
+      total,
+      page,
+      limit,
+      queue,
       certificates,
     });
-
   } catch (err) {
     return serverError(res, err);
   }
@@ -514,6 +681,7 @@ const getCertificates = async (req, res) => {
 
 /**
  * PUT /api/admin/certificates/:id/reject
+ * Body: { reason: string } (required)
  */
 const rejectCertificate = async (req, res) => {
   const certificateId = Number(req.params.id);
@@ -521,6 +689,14 @@ const rejectCertificate = async (req, res) => {
   if (!Number.isInteger(certificateId)) {
     return res.status(400).json({
       error: 'Invalid certificate ID',
+    });
+  }
+
+  const reason = (req.body?.reason || req.body?.rejection_reason || '').trim();
+
+  if (!reason) {
+    return res.status(400).json({
+      error: 'Rejection reason is required',
     });
   }
 
@@ -543,7 +719,7 @@ const rejectCertificate = async (req, res) => {
 
     const certificate = certificates[0];
 
-    if (certificate.status !== 'in_review') {
+    if (certificate.status !== 'ready_for_approval') {
       return res.status(400).json({
         error: `Certificate status is '${certificate.status}', cannot reject`,
       });
@@ -554,9 +730,20 @@ const rejectCertificate = async (req, res) => {
        SET 
          status = 'rejected',
          approved_by = ?,
-         approved_at = NOW()
+         approved_at = NOW(),
+         rejection_reason = ?
        WHERE id = ?`,
-      [req.user.id, certificateId]
+      [req.user.id, reason, certificateId]
+    );
+
+    await logCertificateAudit(certificateId, req.user.id, 'admin_reject', reason);
+
+    const residentUserId = await getResidentUserIdForCertificate(certificateId);
+    await notifyUser(
+      residentUserId,
+      'Certificate request rejected',
+      `Your certificate request #${certificateId} was rejected: ${reason}`,
+      `/resident-dashboard`
     );
 
     logger.info(
@@ -579,6 +766,7 @@ module.exports = {
   listUsers,
   getStaffList,
   assignKebeleStaff,
+  assignCertificate,
   approveCertificate,
   getCertificates,
   rejectCertificate,

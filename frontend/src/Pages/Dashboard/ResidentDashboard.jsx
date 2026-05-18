@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { FileText, Download, AlertTriangle, User, LogOut, Send, Phone, Mail, MapPin, Shield, CheckCircle, Clock } from 'lucide-react';
@@ -391,9 +391,13 @@ const css = `
     border-radius: 20px;
   }
 
-  .kd-badge.issued { background: #f0fdf4; color: #16a34a; }
   .kd-badge.pending { background: #fffbeb; color: #b45309; }
-  .kd-badge.in-review { background: #eff6ff; color: #1d4ed8; }
+  .kd-badge.assigned { background: #e0f2fe; color: #0369a1; }
+  .kd-badge.processing { background: #ede9fe; color: #5b21b6; }
+  .kd-badge.ready { background: #dbeafe; color: #1d4ed8; }
+  .kd-badge.approved { background: #f0fdf4; color: #16a34a; }
+  .kd-badge.rejected { background: #fef2f2; color: #b91c1c; }
+  .kd-badge.issued { background: #f0fdf4; color: #15803d; }
 
   .kd-dl-btn {
     width: 32px; height: 32px;
@@ -636,9 +640,18 @@ const ResidentDashboard = () => {
     joinedDate: "January 15, 2024"
   });
   const [loading, setLoading] = useState(true);
+  const [certFetchError, setCertFetchError] = useState(null);
+  const [certQuery, setCertQuery] = useState('');
+  const [certPage, setCertPage] = useState(1);
+  const certPageSize = 8;
+
+  useEffect(() => {
+    setCertPage(1);
+  }, [certQuery]);
 
   useEffect(() => {
     const fetchData = async () => {
+      setCertFetchError(null);
       try {
         const token = localStorage.getItem("token") || sessionStorage.getItem("token");
         const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -663,6 +676,7 @@ const ResidentDashboard = () => {
         setCertificates(certRes.data.certificates || []);
       } catch (err) {
         console.error("Error loading resident dashboard data:", err);
+        setCertFetchError(err.response?.data?.error || "Could not load your certificates.");
       } finally {
         setLoading(false);
       }
@@ -674,7 +688,54 @@ const ResidentDashboard = () => {
   const initials = user.name.split(' ').map(n => n[0]).join('');
 
   const issuedCount = certificates.filter(c => c.status === 'issued' || c.status === 'approved').length;
-  const pendingCount = certificates.filter(c => c.status === 'pending').length;
+  const pendingCount = certificates.filter(c =>
+    ['pending', 'assigned', 'processing', 'ready_for_approval'].includes(c.status)
+  ).length;
+
+  const filteredCertificates = useMemo(() => {
+    const q = certQuery.trim().toLowerCase();
+    if (!q) return certificates;
+    return certificates.filter((c) => {
+      const blob = [
+        c.id,
+        c.certificate_type,
+        c.status,
+        c.rejection_reason,
+      ].filter(Boolean).join(' ').toLowerCase();
+      return blob.includes(q);
+    });
+  }, [certificates, certQuery]);
+
+  const certTotalPages = Math.max(1, Math.ceil(filteredCertificates.length / certPageSize));
+
+  const pagedCertificates = useMemo(() => {
+    const start = (certPage - 1) * certPageSize;
+    return filteredCertificates.slice(start, start + certPageSize);
+  }, [filteredCertificates, certPage, certPageSize]);
+
+  const certStatusBadgeClass = (status) => {
+    const map = {
+      pending: 'pending',
+      assigned: 'assigned',
+      processing: 'processing',
+      ready_for_approval: 'ready',
+      approved: 'approved',
+      rejected: 'rejected',
+      issued: 'issued',
+    };
+    return map[status] || 'pending';
+  };
+
+  const certStatusLabel = (status) =>
+    ({
+      pending: 'Pending',
+      assigned: 'Assigned',
+      processing: 'Processing',
+      ready_for_approval: 'Ready For Approval',
+      approved: 'Approved',
+      rejected: 'Rejected',
+      issued: 'Issued',
+    }[status] || status);
 
   const applyItems = [
     { label: 'Birth', icon: '👶', path: 'birth' },
@@ -849,7 +910,8 @@ const ResidentDashboard = () => {
               <div className="kd-grid">
                 {/* Apply cards */}
                 <div>
-                  <div className="kd-section-hd">Apply for Certificate</div>
+                  <div className="kd-section-hd">Request certificate</div>
+                  <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>Choose a certificate type to submit a new request. An administrator will assign your file to the correct office.</p>
                   <div className="kd-apply-grid">
                     {applyItems.map((item) => (
                       <Link key={item.path} to={`/apply/${item.path}`} className="kd-apply-card">
@@ -863,37 +925,92 @@ const ResidentDashboard = () => {
 
                 {/* Certificate list */}
                 <div>
-                  <div className="kd-section-hd">My Certificates</div>
+                  <div className="kd-section-hd">My certificate requests</div>
                   <div className="kd-cert-panel">
                     <div className="kd-cert-panel-hd">
                       <Download />
-                      Recent Applications
+                      Status & downloads
                     </div>
-                    {certificates.length === 0 ? (
+                    {certFetchError && (
+                      <p style={{ padding: 16, color: '#b91c1c', fontWeight: 600 }}>{certFetchError}</p>
+                    )}
+                    <div style={{ padding: '12px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <input
+                        className="kd-input"
+                        style={{ maxWidth: 280, margin: 0 }}
+                        placeholder="Search by type, status, or ID…"
+                        value={certQuery}
+                        onChange={(e) => setCertQuery(e.target.value)}
+                      />
+                      <span style={{ fontSize: 12, color: '#94a3b8' }}>
+                        {filteredCertificates.length} request{filteredCertificates.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    {loading ? (
+                      <p style={{ padding: 24, textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Loading certificates…</p>
+                    ) : certificates.length === 0 ? (
                       <p style={{ padding: 24, textAlign: 'center', color: '#64748b', fontWeight: '500' }}>No certificate applications yet.</p>
+                    ) : pagedCertificates.length === 0 ? (
+                      <p style={{ padding: 24, textAlign: 'center', color: '#64748b', fontWeight: '500' }}>No requests match your search.</p>
                     ) : (
-                      certificates.map(cert => (
-                        <div key={cert.id} className="kd-cert-row">
-                          <div>
-                            <div className="kd-cert-type">{(cert.certificate_type || cert.type || "UNKNOWN").toUpperCase()} Certificate</div>
-                            <div className="kd-cert-date">Requested: {cert.requested_at ? new Date(cert.requested_at).toLocaleDateString() : "—"}</div>
+                      pagedCertificates.map(cert => (
+                        <div key={cert.id} className="kd-cert-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                            <div>
+                              <div className="kd-cert-type">{(cert.certificate_type || cert.type || "UNKNOWN").toUpperCase()} certificate</div>
+                              <div className="kd-cert-date">Requested: {cert.requested_at ? new Date(cert.requested_at).toLocaleString() : "—"}</div>
+                              {(cert.status === 'approved' || cert.status === 'issued') && cert.approved_at && (
+                                <div className="kd-cert-date" style={{ color: '#15803d' }}>
+                                  Approved: {new Date(cert.approved_at).toLocaleString()}
+                                </div>
+                              )}
+                            </div>
+                            <div className="kd-cert-actions">
+                              <span className={`kd-badge ${certStatusBadgeClass(cert.status)}`}>
+                                {certStatusLabel(cert.status)}
+                              </span>
+                              {(cert.status === 'issued' || cert.status === 'approved') && (
+                                <button
+                                  className="kd-dl-btn"
+                                  onClick={() => downloadCertificate(cert)}
+                                  title="Download certificate"
+                                  type="button"
+                                >
+                                  <Download />
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <div className="kd-cert-actions">
-                            <span className={`kd-badge ${(cert.status === 'issued' || cert.status === 'approved') ? 'issued' : cert.status === 'in_review' ? 'in-review' : 'pending'}`}>
-                              {cert.status.toUpperCase()}
-                            </span>
-                            {(cert.status === 'issued' || cert.status === 'approved') && (
-                              <button
-                                className="kd-dl-btn"
-                                onClick={() => downloadCertificate(cert)}
-                                title="Download Certificate"
-                              >
-                                <Download />
-                              </button>
-                            )}
-                          </div>
+                          {cert.status === 'rejected' && cert.rejection_reason && (
+                            <div style={{ fontSize: 12, color: '#b91c1c', background: '#fef2f2', padding: '8px 10px', borderRadius: 8 }}>
+                              <strong>Rejection reason:</strong> {cert.rejection_reason}
+                            </div>
+                          )}
                         </div>
                       ))
+                    )}
+                    {filteredCertificates.length > certPageSize && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderTop: '1px solid #f1f5f9' }}>
+                        <button
+                          type="button"
+                          className="kd-submit-btn"
+                          style={{ width: 'auto', padding: '8px 16px', background: '#e2e8f0', color: '#1e293b' }}
+                          disabled={certPage <= 1}
+                          onClick={() => setCertPage((p) => Math.max(1, p - 1))}
+                        >
+                          Previous
+                        </button>
+                        <span style={{ fontSize: 13, color: '#64748b' }}>Page {certPage} / {certTotalPages}</span>
+                        <button
+                          type="button"
+                          className="kd-submit-btn"
+                          style={{ width: 'auto', padding: '8px 16px', background: '#e2e8f0', color: '#1e293b' }}
+                          disabled={certPage >= certTotalPages}
+                          onClick={() => setCertPage((p) => Math.min(certTotalPages, p + 1))}
+                        >
+                          Next
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>

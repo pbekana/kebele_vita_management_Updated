@@ -250,55 +250,6 @@ const requestCertificate = async (req, res) => {
       certificateId = certificateResult.insertId;
     }
 
-    const positionMap = {
-      birth: 'birth_officer',
-      marriage: 'marriage_officer',
-      death: 'death_officer',
-      'residency-id': 'id_officer',
-      'residency': 'id_officer'
-    };
-
-    const taskTypeMap = {
-      birth: 'birth_certificate',
-      marriage: 'marriage_certificate',
-      death: 'death_certificate',
-      'residency-id': 'id_card',
-      'residency': 'id_card'
-    };
-
-    const staffPosition = positionMap[certificate_type] || 'birth_officer';
-    const taskType = taskTypeMap[certificate_type] || 'birth_certificate';
-
-    const [staffRows] = await connection.query(
-      `SELECT user_id FROM kebele_staff WHERE position = ? LIMIT 1`,
-      [staffPosition]
-    );
-
-    if (staffRows.length > 0) {
-      const staffUserId = staffRows[0].user_id;
-      await connection.query(
-        `INSERT INTO tasks (
-          title,
-          description,
-          task_type,
-          assigned_to,
-          assigned_by,
-          resident_id,
-          status,
-          due_date
-        )
-        VALUES (?, ?, ?, ?, ?, ?, 'pending', DATE_ADD(NOW(), INTERVAL 7 DAY))`,
-        [
-          `New ${certificate_type.replace('-', ' ')} Request`,
-          `A resident has requested a new ${certificate_type}. Please process the request.`,
-          taskType,
-          staffUserId,
-          staffUserId,
-          resident.id
-        ]
-      );
-    }
-
     await connection.commit();
 
     logger.info(
@@ -347,7 +298,8 @@ const getMyCertificates = async (req, res) => {
         approved_at,
         issued_at,
         issue_date,
-        pdf_url
+        pdf_url,
+        rejection_reason
       FROM certificates
       WHERE resident_id = ?
       ORDER BY requested_at DESC`,
@@ -499,8 +451,8 @@ const getProfile = async (req, res) => {
         r.birth_date,
         r.address,
         r.phone_number,
-        u.firstname,
-        u.lastname,
+        r.firstname,
+        r.lastname,
         u.email,
         u.created_at
       FROM residents r
@@ -524,6 +476,57 @@ const getProfile = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/residents/notifications
+ */
+const listMyNotifications = async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT id, title, body, link_path, is_read, created_at
+       FROM user_notifications
+       WHERE user_id = ?
+       ORDER BY created_at DESC
+       LIMIT 100`,
+      [req.user.id]
+    );
+
+    return res.status(200).json({
+      count: rows.length,
+      notifications: rows,
+    });
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
+/**
+ * PATCH /api/residents/notifications/:id/read
+ */
+const markNotificationRead = async (req, res) => {
+  const notificationId = Number(req.params.id);
+
+  if (!Number.isInteger(notificationId)) {
+    return res.status(400).json({ error: 'Invalid notification id' });
+  }
+
+  try {
+    const [result] = await pool.query(
+      `UPDATE user_notifications
+       SET is_read = TRUE
+       WHERE id = ? AND user_id = ?`,
+      [notificationId, req.user.id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+
+    return res.status(200).json({ message: 'Marked as read' });
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
 module.exports = {
   getResidentById,
   requestCertificate,
@@ -531,4 +534,6 @@ module.exports = {
   downloadCertificate,
   submitFeedback,
   getProfile,
+  listMyNotifications,
+  markNotificationRead,
 };

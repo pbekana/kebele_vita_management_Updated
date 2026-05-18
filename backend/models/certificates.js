@@ -128,7 +128,7 @@ const getPending = async () => {
   const [rows] = await pool.query(
     `SELECT *
      FROM certificates
-     WHERE status IN ('pending','in_review')
+     WHERE status IN ('pending','assigned','processing','ready_for_approval')
      ORDER BY requested_at DESC`
   );
 

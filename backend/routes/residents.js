@@ -10,6 +10,8 @@ const {
   downloadCertificate,
   submitFeedback,
   getProfile,
+  listMyNotifications,
+  markNotificationRead,
 } = require('../controllers/residentController');
 
 router.use(protect);
@@ -43,7 +45,8 @@ router.post(
 
 router.get('/certificates', getMyCertificates);
 
-
+router.get('/notifications', listMyNotifications);
+router.patch('/notifications/:id/read', markNotificationRead);
 
 // =======================
 // DOWNLOAD CERTIFICATE

@@ -1,4 +1,5 @@
 const { pool } = require('./connectDB');
+const { applyCertificateWorkflowMigration } = require('./applyCertificateWorkflowMigration');
 
 const initDB = async () => {
   try {
@@ -148,9 +149,18 @@ const initDB = async () => {
 
   pdf_url VARCHAR(500),
 
+  assigned_staff_user_id INT NULL,
+  assigned_by_user_id INT NULL,
+  assigned_at TIMESTAMP NULL,
+  rejection_reason TEXT NULL,
+  prepared_by_user_id INT NULL,
+  ready_for_approval_at TIMESTAMP NULL,
+
   status ENUM(
     'pending',
-    'in_review',
+    'assigned',
+    'processing',
+    'ready_for_approval',
     'approved',
     'rejected',
     'issued'
@@ -180,6 +190,18 @@ const initDB = async () => {
     ON DELETE SET NULL,
 
   FOREIGN KEY (issued_by)
+    REFERENCES users(id)
+    ON DELETE SET NULL,
+
+  FOREIGN KEY (assigned_staff_user_id)
+    REFERENCES users(id)
+    ON DELETE SET NULL,
+
+  FOREIGN KEY (assigned_by_user_id)
+    REFERENCES users(id)
+    ON DELETE SET NULL,
+
+  FOREIGN KEY (prepared_by_user_id)
     REFERENCES users(id)
     ON DELETE SET NULL )
 `);
@@ -261,6 +283,8 @@ const initDB = async () => {
       ON DELETE SET NULL
   )
 `);
+
+    await applyCertificateWorkflowMigration(pool);
 
     console.log('MySQL tables initialized successfully.');
 

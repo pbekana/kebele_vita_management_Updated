@@ -29,7 +29,7 @@ const create = async ({
     `SELECT id FROM certificates
      WHERE resident_id = ?
      AND certificate_type = 'marriage'
-     AND status IN ('pending','in_review')`,
+     AND status IN ('pending','assigned','processing','ready_for_approval')`,
     [resident_id]
   );
 

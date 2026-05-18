@@ -5,6 +5,8 @@ import {
   CheckCircle, XCircle, Bell, Briefcase, ClipboardList
 } from 'lucide-react';
 
+const API = 'http://localhost:5000/api';
+
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedReport, setSelectedReport] = useState(null);
@@ -19,29 +21,61 @@ const AdminDashboard = () => {
   });
   const [loading, setLoading] = useState(false);
 
+  const [approvalCerts, setApprovalCerts] = useState([]);
+  const [assignmentCerts, setAssignmentCerts] = useState([]);
+  const [inProgressCerts, setInProgressCerts] = useState([]);
+  const [approvalTotal, setApprovalTotal] = useState(0);
+  const [assignmentTotal, setAssignmentTotal] = useState(0);
+  const [inProgressTotal, setInProgressTotal] = useState(0);
+  const [certStaffList, setCertStaffList] = useState([]);
+  const [certSubTab, setCertSubTab] = useState('assignment');
+  const [certSearch, setCertSearch] = useState('');
+  const [certError, setCertError] = useState(null);
+  const [assignTo, setAssignTo] = useState({});
+
+  const refreshCertificates = async () => {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const config = { headers: { Authorization: `Bearer ${token}` } };
+    const params = { limit: 50 };
+    const [aRes, bRes, pRes] = await Promise.all([
+      axios.get(`${API}/admin/certificates`, { ...config, params: { ...params, queue: 'approval' } }),
+      axios.get(`${API}/admin/certificates`, { ...config, params: { ...params, queue: 'assignment' } }),
+      axios.get(`${API}/admin/certificates`, { ...config, params: { ...params, queue: 'in_progress' } }),
+    ]);
+    setApprovalCerts(aRes.data.certificates || []);
+    setApprovalTotal(aRes.data.total ?? aRes.data.count ?? 0);
+    setAssignmentCerts(bRes.data.certificates || []);
+    setAssignmentTotal(bRes.data.total ?? bRes.data.count ?? 0);
+    setInProgressCerts(pRes.data.certificates || []);
+    setInProgressTotal(pRes.data.total ?? pRes.data.count ?? 0);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      setCertError(null);
       try {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         const config = { headers: { Authorization: `Bearer ${token}` } };
-        
+
         if (activeTab === 'overview' || activeTab === 'certificates') {
-          const certRes = await axios.get('http://localhost:5000/api/admin/certificates', config);
-          setPendingCertificates(certRes.data.certificates || []);
+          await refreshCertificates();
+          const staffRes = await axios.get(`${API}/admin/staff`, config);
+          setCertStaffList(staffRes.data.staff || []);
         }
 
         if (activeTab === 'staff' || activeTab === 'tasks') {
-          const staffRes = await axios.get('http://localhost:5000/api/admin/staff', config);
+          const staffRes = await axios.get(`${API}/admin/staff`, config);
           setStaffList(staffRes.data.staff || []);
         }
-        
+
         if (activeTab === 'tasks') {
-          const tasksRes = await axios.get('http://localhost:5000/api/admin/tasks', config);
+          const tasksRes = await axios.get(`${API}/admin/tasks`, config);
           setTasks(tasksRes.data.tasks || []);
         }
       } catch (err) {
         console.error('Error fetching admin data:', err);
+        setCertError(err.response?.data?.error || 'Failed to load certificate data');
       } finally {
         setLoading(false);
       }
@@ -56,30 +90,121 @@ const AdminDashboard = () => {
     reports: 12
   });
 
-  const [pendingCertificates, setPendingCertificates] = useState([]);
+  const staffOptionsForCertificate = (cert) => {
+    const map = {
+      birth: 'birth_officer',
+      marriage: 'marriage_officer',
+      death: 'death_officer',
+    };
+    const pos = map[cert.certificate_type];
+    return certStaffList.filter((s) => s.position === pos && s.is_active !== false);
+  };
 
   const handleApprove = async (id) => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.put(`http://localhost:5000/api/admin/certificates/${id}/approve`, {}, config);
-      alert(`✅ Certificate #${id} Approved!`);
-      setPendingCertificates(prev => prev.filter(cert => cert.id !== id));
+      await axios.put(`${API}/admin/certificates/${id}/approve`, {}, config);
+      alert(`Certificate #${id} approved.`);
+      await refreshCertificates();
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to approve certificate');
     }
   };
 
   const handleReject = async (id) => {
+    const reason = window.prompt('Rejection reason (required):');
+    if (!reason || !reason.trim()) {
+      alert('A rejection reason is required.');
+      return;
+    }
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.put(`http://localhost:5000/api/admin/certificates/${id}/reject`, {}, config);
-      alert(`❌ Certificate #${id} Rejected.`);
-      setPendingCertificates(prev => prev.filter(cert => cert.id !== id));
+      await axios.put(`${API}/admin/certificates/${id}/reject`, { reason: reason.trim() }, config);
+      alert(`Certificate #${id} rejected.`);
+      await refreshCertificates();
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to reject certificate');
     }
+  };
+
+  const handleAssign = async (certId, staffUserId) => {
+    if (!staffUserId) {
+      alert('Select a staff member to assign.');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      await axios.put(
+        `${API}/admin/certificates/${certId}/assign`,
+        { staff_user_id: Number(staffUserId) },
+        config
+      );
+      alert(`Request #${certId} assigned to staff.`);
+      await refreshCertificates();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to assign certificate');
+    }
+  };
+
+  const filterCertList = (list) => {
+    const s = certSearch.trim().toLowerCase();
+    if (!s) return list;
+    return list.filter((c) => {
+      const blob = [
+        c.id,
+        c.resident_firstname,
+        c.resident_lastname,
+        c.resident_phone,
+        c.child_name,
+        c.husband_name,
+        c.wife_name,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return blob.includes(s);
+    });
+  };
+
+  const certApplicantSummary = (cert) => {
+    if (cert.certificate_type === 'birth') return `Child: ${cert.child_name || '—'}`;
+    if (cert.certificate_type === 'marriage') {
+      return `Husband: ${cert.husband_name || '—'}, Wife: ${cert.wife_name || '—'}`;
+    }
+    return `Deceased: ${cert.child_name || cert.deceased_name || '—'}`;
+  };
+
+  const renderAssignControls = (cert) => {
+    const options = staffOptionsForCertificate(cert);
+    return (
+      <div className="flex flex-wrap gap-2 items-center">
+        <select
+          className="border rounded-lg px-2 py-1 text-sm"
+          value={assignTo[cert.id] || ''}
+          onChange={(e) => setAssignTo((prev) => ({ ...prev, [cert.id]: e.target.value }))}
+        >
+          <option value="">Select staff…</option>
+          {options.map((s) => (
+            <option key={s.user_id} value={s.user_id}>
+              {s.email} ({s.position})
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => handleAssign(cert.id, assignTo[cert.id])}
+          className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700"
+        >
+          Assign
+        </button>
+        {options.length === 0 && (
+          <span className="text-xs text-amber-600">No active staff for this type.</span>
+        )}
+      </div>
+    );
   };
 
   const handleImageUpload = (e) => {
@@ -216,6 +341,9 @@ const AdminDashboard = () => {
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div>
+              {certError && (
+                <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-2">{certError}</p>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
                 <div className="bg-white p-6 rounded-2xl shadow">
                   <div className="text-indigo-600 text-4xl mb-2">👥</div>
@@ -223,9 +351,12 @@ const AdminDashboard = () => {
                   <p className="text-gray-600">Total Residents</p>
                 </div>
                 <div className="bg-white p-6 rounded-2xl shadow">
-                  <div className="text-orange-500 text-4xl mb-2">📄</div>
-                  <div className="text-3xl font-bold">{pendingCertificates.length}</div>
-                  <p className="text-gray-600">Pending Certificates</p>
+                  <div className="text-orange-500 text-4xl mb-2">📋</div>
+                  <div className="text-3xl font-bold">{assignmentTotal}</div>
+                  <p className="text-gray-600">Awaiting staff assignment</p>
+                  <p className="text-xs text-gray-400 mt-2">
+                    {inProgressTotal} with staff · {approvalTotal} ready for final approval
+                  </p>
                 </div>
                 <div className="bg-white p-6 rounded-2xl shadow">
                   <div className="text-green-500 text-4xl mb-2">📈</div>
@@ -239,31 +370,110 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              <h3 className="text-xl font-semibold mb-4">Recent Certificate Applications</h3>
-              <div className="bg-white rounded-2xl shadow overflow-hidden">
-                {pendingCertificates.length === 0 ? (
-                  <p className="p-6 text-gray-500 text-center">No pending certificate requests to approve.</p>
+              <h3 className="text-xl font-semibold mb-4">
+                New resident requests
+                {assignmentTotal > 0 && (
+                  <span className="ml-2 text-sm font-normal text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                    {assignmentTotal} pending — assign staff to start processing
+                  </span>
+                )}
+              </h3>
+              <div className="bg-white rounded-2xl shadow overflow-hidden mb-10">
+                {assignmentCerts.length === 0 ? (
+                  <p className="p-6 text-gray-500 text-center">No new certificate requests waiting for staff assignment.</p>
                 ) : (
-                  pendingCertificates.map(cert => (
-                    <div key={cert.id} className="flex items-center justify-between p-6 border-b last:border-0 hover:bg-gray-50">
+                  assignmentCerts.slice(0, 8).map((cert) => (
+                    <div key={cert.id} className="flex flex-wrap items-center justify-between gap-4 p-6 border-b last:border-0 hover:bg-gray-50">
                       <div>
-                        <p className="font-medium">{(cert.certificate_type || "UNKNOWN").toUpperCase()} Certificate</p>
-                        <p className="text-gray-600 text-sm">
-                          {cert.certificate_type === 'birth' ? `Child: ${cert.child_name || "—"}` :
-                           cert.certificate_type === 'marriage' ? `Husband: ${cert.husband_name || "—"}, Wife: ${cert.wife_name || "—"}` :
-                           `Deceased: ${cert.child_name || cert.deceased_name || "—"}`}
+                        <p className="font-medium">
+                          #{(cert.id)} · {(cert.certificate_type || 'UNKNOWN').toUpperCase()} Certificate
+                          <span className="ml-2 text-xs font-semibold uppercase text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                            Pending
+                          </span>
                         </p>
-                        <p className="text-gray-500 text-xs mt-1">Requested by: {cert.resident_firstname} {cert.resident_lastname}</p>
+                        <p className="text-gray-600 text-sm">{certApplicantSummary(cert)}</p>
+                        <p className="text-gray-500 text-xs mt-1">
+                          Requested by: {cert.resident_firstname} {cert.resident_lastname}
+                          {cert.requested_at ? ` · ${new Date(cert.requested_at).toLocaleString()}` : ''}
+                        </p>
                       </div>
-                      <div className="text-sm text-gray-500">Requested: {cert.requested_at ? new Date(cert.requested_at).toLocaleDateString() : "—"}</div>
+                      {renderAssignControls(cert)}
+                    </div>
+                  ))
+                )}
+                {assignmentTotal > 8 && (
+                  <p className="p-4 text-center text-sm text-indigo-600">
+                    <button type="button" className="font-semibold hover:underline" onClick={() => setActiveTab('certificates')}>
+                      View all {assignmentTotal} pending requests in Certificates →
+                    </button>
+                  </p>
+                )}
+              </div>
+
+              {inProgressTotal > 0 && (
+                <>
+                  <h3 className="text-xl font-semibold mb-4">
+                    With staff (in progress)
+                    <span className="ml-2 text-sm font-normal text-violet-700 bg-violet-50 px-2 py-0.5 rounded-full">
+                      {inProgressTotal} — waiting for staff to submit
+                    </span>
+                  </h3>
+                  <div className="bg-white rounded-2xl shadow overflow-hidden mb-10">
+                    {inProgressCerts.slice(0, 6).map((cert) => (
+                      <div key={cert.id} className="flex flex-wrap items-center justify-between gap-4 p-6 border-b last:border-0 hover:bg-gray-50">
+                        <div>
+                          <p className="font-medium">
+                            #{cert.id} · {(cert.certificate_type || 'UNKNOWN').toUpperCase()}
+                            <span className="ml-2 text-xs font-semibold uppercase text-violet-700 bg-violet-100 px-2 py-0.5 rounded-full">
+                              {cert.status.replace('_', ' ')}
+                            </span>
+                          </p>
+                          <p className="text-gray-600 text-sm">{certApplicantSummary(cert)}</p>
+                          <p className="text-gray-500 text-xs mt-1">
+                            Assigned to: {cert.assigned_staff_email || '—'}
+                          </p>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          Staff must click <strong>Submit for admin approval</strong> in their dashboard.
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              <h3 className="text-xl font-semibold mb-4">Ready for final approval</h3>
+              <div className="bg-white rounded-2xl shadow overflow-hidden">
+                {approvalCerts.length === 0 ? (
+                  <p className="p-6 text-gray-500 text-center">
+                    No certificates are waiting for final approval yet.
+                    {assignmentTotal > 0 && (
+                      <span> Assign staff above first — requests appear here after staff uploads the PDF and marks them ready.</span>
+                    )}
+                  </p>
+                ) : (
+                  approvalCerts.slice(0, 6).map((cert) => (
+                    <div key={cert.id} className="flex flex-wrap items-center justify-between gap-4 p-6 border-b last:border-0 hover:bg-gray-50">
+                      <div>
+                        <p className="font-medium">{(cert.certificate_type || 'UNKNOWN').toUpperCase()} Certificate</p>
+                        <p className="text-gray-600 text-sm">{certApplicantSummary(cert)}</p>
+                        <p className="text-gray-500 text-xs mt-1">
+                          Requested by: {cert.resident_firstname} {cert.resident_lastname}
+                        </p>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Requested: {cert.requested_at ? new Date(cert.requested_at).toLocaleDateString() : '—'}
+                      </div>
                       <div className="flex gap-3">
                         <button
+                          type="button"
                           onClick={() => handleApprove(cert.id)}
                           className="px-5 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 flex items-center gap-2"
                         >
                           <CheckCircle className="w-4 h-4" /> Approve
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleReject(cert.id)}
                           className="px-5 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center gap-2"
                         >
@@ -280,62 +490,138 @@ const AdminDashboard = () => {
           {/* Certificates Tab */}
           {activeTab === 'certificates' && (
             <div>
-              <h3 className="text-2xl font-semibold mb-6">Certificate Management</h3>
+              <h3 className="text-2xl font-semibold mb-4">Certificate management</h3>
+              {certError && (
+                <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-2">{certError}</p>
+              )}
+              <div className="flex flex-wrap gap-3 mb-6">
+                <button
+                  type="button"
+                  onClick={() => setCertSubTab('assignment')}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold ${
+                    certSubTab === 'assignment' ? 'bg-indigo-600 text-white' : 'bg-white border text-gray-700'
+                  }`}
+                >
+                  New requests — assign staff ({assignmentTotal})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCertSubTab('approval')}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold ${
+                    certSubTab === 'approval' ? 'bg-indigo-600 text-white' : 'bg-white border text-gray-700'
+                  }`}
+                >
+                  Ready for final approval ({approvalTotal})
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">
+                Resident submissions start as <strong>Pending</strong>. Assign a staff member here first; after they prepare the PDF, the request moves to final approval.
+              </p>
+              <div className="flex flex-wrap gap-3 mb-4 items-center">
+                <input
+                  type="search"
+                  placeholder="Filter this page (resident, phone, ID)…"
+                  className="border rounded-xl px-4 py-2 text-sm w-full max-w-md"
+                  value={certSearch}
+                  onChange={(e) => setCertSearch(e.target.value)}
+                />
+                {loading && <span className="text-sm text-gray-500">Refreshing…</span>}
+              </div>
+
               <div className="bg-white rounded-2xl shadow overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
-                    <tr>
-                      <th className="px-6 py-4 text-left font-semibold">Type</th>
-                      <th className="px-6 py-4 text-left font-semibold">Applicant</th>
-                      <th className="px-6 py-4 text-left font-semibold">Requested</th>
-                      <th className="px-6 py-4 text-left font-semibold">Status</th>
-                      <th className="px-6 py-4 text-left font-semibold">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingCertificates.length === 0 ? (
+                {certSubTab === 'approval' ? (
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b">
                       <tr>
-                        <td colSpan="5" className="px-6 py-8 text-center text-gray-500 font-medium">No pending certificate requests found.</td>
+                        <th className="px-6 py-4 text-left font-semibold">Type</th>
+                        <th className="px-6 py-4 text-left font-semibold">Applicant</th>
+                        <th className="px-6 py-4 text-left font-semibold">Resident</th>
+                        <th className="px-6 py-4 text-left font-semibold">Requested</th>
+                        <th className="px-6 py-4 text-left font-semibold">PDF</th>
+                        <th className="px-6 py-4 text-left font-semibold">Actions</th>
                       </tr>
-                    ) : (
-                      pendingCertificates.map(cert => (
-                        <tr key={cert.id} className="border-b hover:bg-gray-50">
-                          <td className="px-6 py-4 font-medium">{(cert.certificate_type || "UNKNOWN").toUpperCase()}</td>
-                          <td className="px-6 py-4">
-                            {cert.certificate_type === 'birth' ? `Child: ${cert.child_name || "—"}` :
-                             cert.certificate_type === 'marriage' ? `Husband: ${cert.husband_name || "—"}, Wife: ${cert.wife_name || "—"}` :
-                             `Deceased: ${cert.child_name || cert.deceased_name || "—"}`}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-600">{cert.requested_at ? new Date(cert.requested_at).toLocaleDateString() : "—"}</td>
-                          <td className="px-6 py-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              cert.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                              cert.status === 'in_review' ? 'bg-blue-100 text-blue-700' :
-                              cert.status === 'approved' ? 'bg-green-100 text-green-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
-                              {cert.status.toUpperCase()}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 flex gap-2">
-                            <button
-                              onClick={() => handleApprove(cert.id)}
-                              className="text-green-600 hover:underline text-sm font-semibold mr-3"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => handleReject(cert.id)}
-                              className="text-red-600 hover:underline text-sm font-semibold"
-                            >
-                              Reject
-                            </button>
+                    </thead>
+                    <tbody>
+                      {filterCertList(approvalCerts).length === 0 ? (
+                        <tr>
+                          <td colSpan="6" className="px-6 py-8 text-center text-gray-500 font-medium">
+                            No certificates ready for final approval.
+                            {assignmentTotal > 0 && ' Assign pending requests to staff first.'}
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        filterCertList(approvalCerts).map((cert) => (
+                          <tr key={cert.id} className="border-b hover:bg-gray-50">
+                            <td className="px-6 py-4 font-medium">{(cert.certificate_type || 'UNKNOWN').toUpperCase()}</td>
+                            <td className="px-6 py-4 text-sm">{certApplicantSummary(cert)}</td>
+                            <td className="px-6 py-4 text-sm">
+                              {cert.resident_firstname} {cert.resident_lastname}
+                              <div className="text-xs text-gray-400">{cert.resident_phone}</div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-600">
+                              {cert.requested_at ? new Date(cert.requested_at).toLocaleString() : '—'}
+                            </td>
+                            <td className="px-6 py-4 text-sm">{cert.pdf_url ? 'Uploaded' : '—'}</td>
+                            <td className="px-6 py-4">
+                              <button
+                                type="button"
+                                onClick={() => handleApprove(cert.id)}
+                                className="text-green-600 hover:underline text-sm font-semibold mr-3"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleReject(cert.id)}
+                                className="text-red-600 hover:underline text-sm font-semibold"
+                              >
+                                Reject
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="px-6 py-4 text-left font-semibold">Type</th>
+                        <th className="px-6 py-4 text-left font-semibold">Details</th>
+                        <th className="px-6 py-4 text-left font-semibold">Resident</th>
+                        <th className="px-6 py-4 text-left font-semibold">Requested</th>
+                        <th className="px-6 py-4 text-left font-semibold">Assign to</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filterCertList(assignmentCerts).length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="px-6 py-8 text-center text-gray-500 font-medium">
+                            No new certificate requests from residents.
+                          </td>
+                        </tr>
+                      ) : (
+                        filterCertList(assignmentCerts).map((cert) => (
+                          <tr key={cert.id} className="border-b hover:bg-gray-50">
+                            <td className="px-6 py-4 font-medium">
+                              {(cert.certificate_type || 'UNKNOWN').toUpperCase()}
+                              <span className="ml-2 text-xs text-amber-700">Pending</span>
+                            </td>
+                            <td className="px-6 py-4 text-sm">{certApplicantSummary(cert)}</td>
+                            <td className="px-6 py-4 text-sm">
+                              {cert.resident_firstname} {cert.resident_lastname}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-600">
+                              {cert.requested_at ? new Date(cert.requested_at).toLocaleString() : '—'}
+                            </td>
+                            <td className="px-6 py-4">{renderAssignControls(cert)}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           )}

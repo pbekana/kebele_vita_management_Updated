@@ -18,13 +18,14 @@ const findById = async (id) => {
       r.national_id,
 
       u.id AS issuedById,
-      u.firstname AS issuedByFirstname,
-      u.lastname AS issuedByLastname,
+      issuer.firstname AS issuedByFirstname,
+      issuer.lastname AS issuedByLastname,
       u.email AS issuedByEmail
 
     FROM id_cards c
     LEFT JOIN residents r ON c.resident_id = r.id
     LEFT JOIN users u ON c.issued_by = u.id
+    LEFT JOIN residents issuer ON issuer.user_id = u.id
     WHERE c.id = ?
     LIMIT 1`,
     [id]

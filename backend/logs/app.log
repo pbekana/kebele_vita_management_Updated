@@ -75,3 +75,39 @@
 [2026-05-18T07:11:02.055Z] [INFO] Server running on port 5000
 [2026-05-18T07:13:52.414Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
 [2026-05-18T07:13:52.517Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T08:02:07.299Z] [INFO] Server running on port 5000
+[2026-05-18T08:03:39.371Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T08:03:39.407Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T08:04:50.666Z] [INFO] Certificate request ID Card created by resident 7
+[2026-05-18T08:04:54.942Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T08:04:54.956Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T08:06:44.963Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T08:06:45.002Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T08:53:00.717Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T08:53:00.778Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T08:53:26.015Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T08:53:26.023Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T08:58:23.216Z] [INFO] Migration: added certificates.assigned_staff_user_id
+[2026-05-18T08:58:23.787Z] [INFO] Migration: added certificates.assigned_by_user_id
+[2026-05-18T08:58:23.866Z] [INFO] Migration: added certificates.assigned_at
+[2026-05-18T08:58:23.944Z] [INFO] Migration: added certificates.rejection_reason
+[2026-05-18T08:58:24.081Z] [INFO] Migration: added certificates.prepared_by_user_id
+[2026-05-18T08:58:24.227Z] [INFO] Migration: added certificates.ready_for_approval_at
+[2026-05-18T08:58:26.070Z] [INFO] Migration: FK fk_certificates_assigned_staff
+[2026-05-18T08:58:28.052Z] [INFO] Migration: FK fk_certificates_assigned_by
+[2026-05-18T08:58:29.917Z] [INFO] Migration: FK fk_certificates_prepared_by
+[2026-05-18T08:58:34.538Z] [INFO] Migration: certificates.status enum upgraded for workflow
+[2026-05-18T08:58:34.558Z] [INFO] Server running on port 5000
+[2026-05-18T08:59:43.809Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T08:59:43.818Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T09:02:32.708Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T09:02:32.720Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T09:03:36.483Z] [INFO] Certificate request 7 created by resident 7
+[2026-05-18T09:03:39.768Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T09:03:39.778Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T09:03:54.668Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T09:03:54.676Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T09:07:45.308Z] [INFO] Server running on port 5000
+[2026-05-18T09:29:07.011Z] [INFO] Server running on port 5000
+[2026-05-18T09:29:41.631Z] [INFO] Admin 1 assigned certificate 7 to staff 2
+[2026-05-18T09:46:32.300Z] [INFO] Server running on port 5000

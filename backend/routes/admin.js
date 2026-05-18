@@ -4,7 +4,7 @@ const { body } = require('express-validator');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const {
   createUser, activateUser, deactivateUser, listUsers,
-  assignKebeleStaff, approveCertificate, getStaffList,
+  assignKebeleStaff, assignCertificate, approveCertificate, getStaffList,
   getCertificates, rejectCertificate
 } = require('../controllers/adminController');
 const {
@@ -30,6 +30,7 @@ router.put('/assignKebeleStaff', [
 ],assignKebeleStaff);
 
 router.get('/certificates', getCertificates);
+router.put('/certificates/:id/assign', assignCertificate);
 router.put('/certificates/:id/approve', approveCertificate);
 router.put('/certificates/:id/reject', rejectCertificate);
 
