@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS kebele_staff (
 CREATE TABLE IF NOT EXISTS certificates (
   id INT AUTO_INCREMENT PRIMARY KEY,
   resident_id INT NOT NULL,
-  certificate_type ENUM('birth','marriage','death') NOT NULL,
+  certificate_type ENUM('birth','marriage','death','residency-id','residency') NOT NULL,
   child_name VARCHAR(255),
   mother_name VARCHAR(255),
   father_name VARCHAR(255),

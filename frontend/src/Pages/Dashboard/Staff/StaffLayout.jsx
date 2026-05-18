@@ -22,6 +22,12 @@ const StaffLayout = () => {
       role: "kebele_staff", // Every staff member has this role
     },
     {
+      path: "/staff/certificates",
+      label: "Certificate Requests",
+      icon: FileText,
+      role: "kebele_staff",
+    },
+    {
       path: "/staff/death",
       label: "Death Certificates",
       icon: FileText,

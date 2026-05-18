@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
+import { Link } from 'react-router-dom';
+
 export default function StaffDashboard() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,8 +27,19 @@ export default function StaffDashboard() {
 
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome to Staff Dashboard</h1>
-      <p className="text-gray-600 mb-8">Here are your assigned tasks and modules.</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome to Staff Dashboard</h1>
+          <p className="text-gray-600">Here are your assigned tasks and modules.</p>
+        </div>
+        
+        <Link 
+          to="/staff/certificates" 
+          className="mt-4 md:mt-0 flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-md hover:bg-indigo-700 transition"
+        >
+          📄 Process Assigned Certificates &rarr;
+        </Link>
+      </div>
 
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div className="p-6 border-b">

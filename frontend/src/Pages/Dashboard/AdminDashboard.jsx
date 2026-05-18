@@ -95,9 +95,11 @@ const AdminDashboard = () => {
       birth: 'birth_officer',
       marriage: 'marriage_officer',
       death: 'death_officer',
+      'residency-id': 'id_officer',
+      residency: 'id_officer'
     };
     const pos = map[cert.certificate_type];
-    return certStaffList.filter((s) => s.position === pos && s.is_active !== false);
+    return certStaffList.filter((s) => (s.position === pos || s.position === 'kebele_staff') && s.is_active !== false);
   };
 
   const handleApprove = async (id) => {
@@ -173,6 +175,9 @@ const AdminDashboard = () => {
     if (cert.certificate_type === 'birth') return `Child: ${cert.child_name || '—'}`;
     if (cert.certificate_type === 'marriage') {
       return `Husband: ${cert.husband_name || '—'}, Wife: ${cert.wife_name || '—'}`;
+    }
+    if (cert.certificate_type === 'residency-id' || cert.certificate_type === 'residency') {
+      return `Applicant: ${cert.child_name || '—'}`; // We saved fullName into child_name in the backend
     }
     return `Deceased: ${cert.child_name || cert.deceased_name || '—'}`;
   };

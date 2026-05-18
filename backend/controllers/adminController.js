@@ -363,15 +363,19 @@ const assignCertificate = async (req, res) => {
       return res.status(404).json({ error: 'Active staff member not found' });
     }
 
-    const positionTypeMap = {
-      birth_officer: 'birth',
-      death_officer: 'death',
-      marriage_officer: 'marriage',
+    const staffPosition = staffRows[0].position;
+
+    const allowedTypesForPosition = {
+      birth_officer: ['birth'],
+      death_officer: ['death'],
+      marriage_officer: ['marriage'],
+      id_officer: ['residency', 'residency-id'],
+      kebele_staff: ['birth', 'death', 'marriage', 'residency', 'residency-id']
     };
 
-    const expectedType = positionTypeMap[staffRows[0].position];
+    const allowedTypes = allowedTypesForPosition[staffPosition] || [];
 
-    if (!expectedType || expectedType !== certificate.certificate_type) {
+    if (staffPosition !== 'kebele_staff' && !allowedTypes.includes(certificate.certificate_type)) {
       return res.status(400).json({
         error: 'Staff position does not match this certificate type',
       });

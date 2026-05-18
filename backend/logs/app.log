@@ -112,3 +112,24 @@
 [2026-05-18T09:29:41.631Z] [INFO] Admin 1 assigned certificate 7 to staff 2
 [2026-05-18T09:46:32.300Z] [INFO] Server running on port 5000
 [2026-05-18T10:13:43.653Z] [INFO] Server running on port 5000
+[2026-05-18T17:00:09.431Z] [INFO] Server running on port 5000
+[2026-05-18T18:05:18.666Z] [INFO] Server running on port 5000
+[2026-05-18T18:08:48.119Z] [INFO] Server running on port 5000
+[2026-05-18T18:36:55.447Z] [INFO] Server running on port 5000
+[2026-05-18T19:07:20.752Z] [INFO] Server running on port 5000
+[2026-05-18T19:09:44.727Z] [INFO] Staff 2 started processing certificate 7
+[2026-05-18T19:11:09.585Z] [INFO] Staff 2 marked certificate 7 ready for approval
+[2026-05-18T19:19:46.274Z] [INFO] Admin 1 approved certificate 7
+[2026-05-18T19:35:56.384Z] [INFO] Admin 1 assigned certificate 6 to staff 3
+[2026-05-18T19:39:03.532Z] [INFO] Staff 3 started processing certificate 6
+[2026-05-18T19:40:38.680Z] [INFO] Staff 3 marked certificate 6 ready for approval
+[2026-05-18T19:43:07.408Z] [INFO] Admin 1 approved certificate 6
+[2026-05-18T20:47:03.476Z] [INFO] Resident registered: biruk@gmail.com
+[2026-05-18T21:56:31.453Z] [INFO] Certificate request ID Card created by resident 9
+[2026-05-18T22:30:04.496Z] [INFO] Server running on port 5000
+[2026-05-18T22:33:50.018Z] [INFO] Certificate request 8 created by resident 9
+[2026-05-18T23:32:12.226Z] [INFO] Server running on port 5000
+[2026-05-18T23:40:05.722Z] [INFO] Server running on port 5000
+[2026-05-18T23:40:23.480Z] [INFO] Admin 1 assigned certificate 8 to staff 5
+[2026-05-18T23:42:01.167Z] [INFO] Staff 5 prepared certificate 8 for admin approval
+[2026-05-18T23:43:28.534Z] [INFO] Admin 1 approved certificate 8

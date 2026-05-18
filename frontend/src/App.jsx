@@ -21,6 +21,7 @@ import BirthOfficerDashboard from './Pages/Dashboard/Staff/BirthOfficerDashboard
 import MarriageOfficerDashboard from './Pages/Dashboard/Staff/MarriageOfficerDashboard';
 import ReportsOfficerDashboard from './Pages/Dashboard/Staff/ReportsOfficerDashboard';
 import IDOfficerDashboard from './Pages/Dashboard/Staff/IDOfficerDashboard';
+import AssignedCertificatesDashboard from './Pages/Dashboard/Staff/AssignedCertificatesDashboard';
 
 // Apply Certificate
 import ApplyCertificate from './Pages/Apply/ApplyCertificate';
@@ -45,6 +46,7 @@ function App() {
         {/* Staff Dashboards */}
         <Route path="/staff" element={<StaffLayout />}>
           <Route path="dashboard" element={<StaffDashboard />} />
+          <Route path="certificates" element={<AssignedCertificatesDashboard />} />
           <Route path="death" element={<DeathOfficerDashboard />} />
           <Route path="birth" element={<BirthOfficerDashboard />} />
           <Route path="marriage" element={<MarriageOfficerDashboard />} />

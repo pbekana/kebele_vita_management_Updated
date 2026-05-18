@@ -322,6 +322,7 @@ const staffCertType = (position) => positionTypeMap[position] || null;
  * Assigned certificate requests for this staff member only.
  */
 const getCertificates = async (req, res) => {
+  console.log("STAFF USER:", req.user);
   try {
     const [staffRows] = await pool.query(
       `SELECT position FROM kebele_staff WHERE user_id = ? LIMIT 1`,
@@ -332,11 +333,7 @@ const getCertificates = async (req, res) => {
       return res.status(404).json({ error: 'Staff profile not found' });
     }
 
-    const certType = staffCertType(staffRows[0].position);
-
-    if (!certType) {
-      return res.status(200).json({ count: 0, total: 0, page: 1, certificates: [] });
-    }
+    // No certType filter needed here
 
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
@@ -351,8 +348,8 @@ const getCertificates = async (req, res) => {
     const q = (req.query.q || '').trim();
     const like = q ? `%${q}%` : null;
 
-    let where = `c.certificate_type = ? AND c.assigned_staff_user_id = ?`;
-    const params = [certType, req.user.id];
+    let where = `c.assigned_staff_user_id = ?`;
+    const params = [req.user.id];
 
     if (statuses.length) {
       where += ` AND c.status IN (${statuses.map(() => '?').join(',')})`;
@@ -425,11 +422,7 @@ const getCertificateById = async (req, res) => {
       return res.status(404).json({ error: 'Staff profile not found' });
     }
 
-    const certType = staffCertType(staffRows[0].position);
-
-    if (!certType) {
-      return res.status(404).json({ error: 'Certificate not found' });
-    }
+    // No certType filter needed here
 
     const [rows] = await pool.query(
       `SELECT
@@ -441,10 +434,9 @@ const getCertificateById = async (req, res) => {
        FROM certificates c
        JOIN residents r ON c.resident_id = r.id
        WHERE c.id = ?
-         AND c.certificate_type = ?
          AND c.assigned_staff_user_id = ?
        LIMIT 1`,
-      [certId, certType, req.user.id]
+      [certId, req.user.id]
     );
 
     if (!rows.length) {
@@ -558,7 +550,7 @@ const uploadCertificatePdf = async (req, res) => {
     const absPath = path.join(uploadDir, `cert_${certId}_${Date.now()}.pdf`);
 
     if (cert.pdf_url) {
-      fs.unlink(cert.pdf_url, () => {});
+      fs.unlink(cert.pdf_url, () => { });
     }
 
     await fs.promises.writeFile(absPath, buffer);

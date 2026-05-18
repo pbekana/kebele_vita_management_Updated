@@ -208,7 +208,7 @@ const requestCertificate = async (req, res) => {
 
     let certificateId = null;
 
-    if (certificate_type !== 'residency-id' && certificate_type !== 'residency') {
+    if (true) {
       // Create certificate request
       const [certificateResult] = await connection.query(
         `INSERT INTO certificates
