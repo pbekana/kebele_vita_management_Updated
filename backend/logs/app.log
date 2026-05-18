@@ -72,3 +72,6 @@
 [2026-05-17T22:06:37.075Z] [INFO] Server running on port 5000
 [2026-05-17T22:07:09.897Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
 [2026-05-17T22:07:09.914Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T07:11:02.055Z] [INFO] Server running on port 5000
+[2026-05-18T07:13:52.414Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
+[2026-05-18T07:13:52.517Z] [ERROR] Error: Unknown column 'u.firstname' in 'field list'
