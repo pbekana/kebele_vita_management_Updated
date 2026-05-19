@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS residents (
   marital_status ENUM('single','married','divorced','widowed'),
   father_name VARCHAR(255),
   mother_name VARCHAR(255),
+  spouse_id INT NULL,
   phone_number VARCHAR(20),
   occupation VARCHAR(100),
   education_level ENUM('none','primary','secondary','tertiary'),
@@ -35,7 +36,8 @@ CREATE TABLE IF NOT EXISTS residents (
   registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (spouse_id) REFERENCES residents(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS children (

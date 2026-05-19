@@ -126,14 +126,11 @@ const getResidentById = async (req, res) => {
   try {
     const [residents] = await pool.query(
       `SELECT
-        r.id,
-        r.birth_date,
-        r.address,
-        r.phone_number,
+        r.*,
         u.email,
         u.role,
         u.is_active,
-        u.created_at
+        u.created_at AS user_created_at
       FROM residents r
       INNER JOIN users u
         ON r.user_id = u.id
@@ -329,7 +326,7 @@ const getMyCertificates = async (req, res) => {
 
 /**
  * GET /api/residents/certificates/:id/download
- * Download issued certificate
+ * Download issued certificate — generates an A5 PDF with full resident data.
  */
 const downloadCertificate = async (req, res) => {
   const certificateId = Number(req.params.id);
@@ -341,67 +338,79 @@ const downloadCertificate = async (req, res) => {
   }
 
   try {
-    const [certificates] = await pool.query(
+    // Fetch certificate + all resident personal fields in one query
+    const [rows] = await pool.query(
       `SELECT
-        c.id,
-        c.certificate_type,
-        c.status,
-        c.issue_date,
-        c.pdf_url,
+        c.*,
+        r.firstname             AS resident_firstname,
+        r.lastname              AS resident_lastname,
+        r.gender,
+        r.birth_date,
+        r.birthplace,
+        r.marital_status,
+        r.father_name,
+        r.mother_name,
+        r.spouse_id,
+        r.phone_number,
+        r.occupation,
+        r.education_level,
+        r.address,
+        r.house_number,
+        r.emergency_contact_name,
+        r.emergency_contact_phone,
+        r.nationality,
+        r.religion,
+        r.disability_status,
+        r.photo_path,
+        r.registration_date,
         u.email AS resident_email
       FROM certificates c
-      INNER JOIN residents r
-        ON c.resident_id = r.id
-      INNER JOIN users u
-        ON r.user_id = u.id
-      WHERE
-        c.id = ?
+      INNER JOIN residents r  ON c.resident_id = r.id
+      INNER JOIN users u      ON r.user_id = u.id
+      WHERE c.id = ?
         AND r.user_id = ?
       LIMIT 1`,
-      [
-        certificateId,
-        req.user.id,
-      ]
+      [certificateId, req.user.id]
     );
 
-    if (certificates.length === 0) {
-      return res.status(404).json({
-        error: 'Certificate not found',
-      });
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Certificate not found' });
     }
 
-    const certificate = certificates[0];
+    const cert = rows[0];
 
-    // Check status
-    if (certificate.status !== 'approved' && certificate.status !== 'issued') {
+    // Block PDF generation for non-approved certificates
+    if (cert.status !== 'approved' && cert.status !== 'issued') {
       return res.status(400).json({
-        error: `Certificate status is '${certificate.status}', must be approved to download`,
+        error: `Certificate status is '${cert.status}', must be approved to download`,
       });
     }
 
-    // Serve existing PDF
+    // Resolve spouse name when resident is married and has a spouse_id
     if (
-      certificate.pdf_url &&
-      fs.existsSync(certificate.pdf_url)
+      (cert.marital_status || '').toLowerCase() === 'married' &&
+      cert.spouse_id
     ) {
-      return res.download(certificate.pdf_url);
+      const [spouseRows] = await pool.query(
+        `SELECT firstname, lastname FROM residents WHERE id = ? LIMIT 1`,
+        [cert.spouse_id]
+      );
+      if (spouseRows.length > 0) {
+        cert.spouse_name = `${spouseRows[0].firstname} ${spouseRows[0].lastname}`;
+      }
     }
 
-    // Generate temporary PDF stream
-    res.setHeader(
-      'Content-Type',
-      'application/pdf'
-    );
-
+    // Always generate a fresh standards-compliant A5 PDF from the template.
+    // We intentionally skip serving cert.pdf_url (staff-uploaded file) so that
+    // every download — including previously approved certificates — uses the
+    // unified layout with correct type-specific sections.
+    res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
       `attachment; filename="certificate_${certificateId}.pdf"`
     );
 
-    generateCertificate(
-      certificate,
-      res
-    );
+    generateCertificate(cert, res);
 
   } catch (err) {
     return serverError(res, err);
@@ -487,14 +496,10 @@ const getProfile = async (req, res) => {
   try {
     const [rows] = await pool.query(
       `SELECT
+        r.*,
         r.id AS resident_id,
-        r.birth_date,
-        r.address,
-        r.phone_number,
-        r.firstname,
-        r.lastname,
         u.email,
-        u.created_at
+        u.created_at AS user_created_at
       FROM residents r
       INNER JOIN users u ON r.user_id = u.id
       WHERE r.user_id = ?

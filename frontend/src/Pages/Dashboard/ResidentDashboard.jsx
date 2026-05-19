@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { FileText, Download, AlertTriangle, User, LogOut, Send, Phone, Mail, MapPin, Shield, CheckCircle, Clock } from 'lucide-react';
+import { FileText, Download, AlertTriangle, User, LogOut, Send, Phone, Mail, MapPin, Shield, CheckCircle, Clock, Printer, Briefcase } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -621,6 +621,251 @@ const css = `
     font-weight: 600;
     color: #1e293b;
   }
+
+  /* ── ETHIOPIAN KEBELE ID CARD STYLE SYSTEM ── */
+  .id-card-container {
+    width: 148mm;
+    height: 210mm;
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    box-sizing: border-box;
+    padding: 12px;
+    font-family: 'Outfit', 'Inter', 'Roboto', sans-serif;
+    color: #000000;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .id-card-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-35deg);
+    font-size: 3.8rem;
+    font-weight: 900;
+    color: rgba(220, 220, 220, 0.22);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1;
+    letter-spacing: 5px;
+  }
+  .id-card-header {
+    background-color: #078930;
+    color: #ffffff;
+    text-align: center;
+    padding: 8px 6px;
+    border-radius: 4px;
+    position: relative;
+    z-index: 2;
+    margin-bottom: 8px;
+    border: 2px solid #005a20;
+  }
+  .id-card-header-country {
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+  }
+  .id-card-header-country-am {
+    font-size: 9.5px;
+    font-weight: bold;
+    margin-top: 1px;
+  }
+  .id-card-header-kebele {
+    font-size: 7.5px;
+    margin-top: 1px;
+    opacity: 0.95;
+    line-height: 1.3;
+  }
+  .id-card-header-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: #ffeb3b;
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+  }
+  .id-card-header-number {
+    font-size: 9.5px;
+    font-weight: bold;
+    background-color: rgba(255, 255, 255, 0.2);
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 2px;
+    margin-top: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+  }
+  .id-card-body {
+    position: relative;
+    z-index: 2;
+    flex-grow: 1;
+  }
+  .id-card-row-top {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .id-card-col-photo {
+    width: 30%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .id-card-photo-box {
+    width: 100%;
+    height: 125px;
+    border: 1px solid #b0bec5;
+    border-radius: 4px;
+    background-color: #eceff1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .id-card-photo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .id-card-photo-placeholder {
+    font-size: 8px;
+    color: #78909c;
+    text-align: center;
+    font-weight: bold;
+    line-height: 1.3;
+  }
+  .id-card-fingerprint-box {
+    width: 100%;
+    height: 55px;
+    border: 1px dashed #78909c;
+    border-radius: 4px;
+    margin-top: 6px;
+    background-color: #fafafa;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .id-card-fingerprint-lbl {
+    font-size: 6.5px;
+    color: #546e7a;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 1px;
+    line-height: 1.2;
+  }
+  .id-card-col-personal {
+    width: 70%;
+  }
+  .id-card-info-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .id-card-info-table td {
+    padding: 2.5px 2px;
+    font-size: 9px;
+    vertical-align: top;
+    line-height: 1.3;
+  }
+  .id-card-label {
+    font-weight: 800;
+    color: #1a237e;
+    width: 42%;
+  }
+  .id-card-val {
+    color: #000000;
+    width: 58%;
+    font-weight: 500;
+  }
+  .id-card-section-title {
+    font-size: 9.5px;
+    font-weight: bold;
+    color: #1a237e;
+    border-bottom: 1.5px solid #1a237e;
+    padding-bottom: 1px;
+    margin-top: 5px;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .id-card-row-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+  }
+  .id-card-row-details-full {
+    grid-column: span 2;
+  }
+  .id-card-footer {
+    position: relative;
+    z-index: 2;
+    margin-top: 6px;
+    border-top: 1px solid #cfd8dc;
+    padding-top: 6px;
+  }
+  .id-card-signatures {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 4px;
+  }
+  .id-card-sig-line {
+    width: 38%;
+    border-top: 1px solid #37474f;
+    text-align: center;
+    padding-top: 2px;
+    font-size: 7.5px;
+    font-weight: bold;
+    color: #37474f;
+    line-height: 1.3;
+  }
+  .id-card-stamp-box {
+    width: 50px;
+    height: 50px;
+    border: 1.5px dashed #f44336;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f44336;
+    font-size: 6.5px;
+    font-weight: 900;
+    text-align: center;
+    text-transform: uppercase;
+    margin: 0 auto;
+    line-height: 1.2;
+  }
+  .id-card-warning {
+    font-size: 6.5px;
+    color: #546e7a;
+    text-align: center;
+    line-height: 1.3;
+    font-weight: bold;
+  }
+  .id-card-print-container {
+    display: none;
+  }
+  @media print {
+    body * {
+      visibility: hidden !important;
+    }
+    .id-card-print-container, .id-card-print-container * {
+      visibility: visible !important;
+    }
+    .id-card-print-container {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 148mm;
+      height: 210mm;
+      display: block !important;
+      border: none !important;
+      box-shadow: none !important;
+      background-color: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+  }
 `;
 
 const ResidentDashboard = () => {
@@ -635,10 +880,30 @@ const ResidentDashboard = () => {
     name: "Resident User",
     email: "resident@kebele.gov.et",
     phone: "—",
-    kebele: "Jimma 01",
+    kebele: "Heremata Mentina",
     address: "Ethiopia",
-    nationalId: "ETH-2024-00123",
-    joinedDate: "January 15, 2024"
+    nationalId: "ETH-2026-00000",
+    joinedDate: "January 15, 2024",
+    firstname: "",
+    lastname: "",
+    gender: "",
+    birth_date: "",
+    birthplace: "",
+    marital_status: "",
+    nationality: "Ethiopian",
+    religion: "",
+    disability_status: 0,
+    father_name: "",
+    mother_name: "",
+    spouse_id: null,
+    spouseName: "",
+    house_number: "",
+    occupation: "",
+    education_level: "",
+    emergency_contact_name: "",
+    emergency_contact_phone: "",
+    photo_path: null,
+    registration_date: ""
   });
   const [loading, setLoading] = useState(true);
   const [certFetchError, setCertFetchError] = useState(null);
@@ -650,25 +915,53 @@ const ResidentDashboard = () => {
     setCertPage(1);
   }, [certQuery]);
 
+  const getAuthConfig = () => {
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    if (!token) {
+      return null;
+    }
+    return { headers: { Authorization: `Bearer ${token}` } };
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setCertFetchError(null);
       try {
-        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-        const config = { headers: { Authorization: `Bearer ${token}` } };
+        const config = getAuthConfig();
+
+        if (!config) {
+          setCertFetchError("Authentication required. Please log in to view your dashboard.");
+          return;
+        }
 
         // 1. Fetch Profile
         const profileRes = await axios.get("http://localhost:5000/api/residents/profile", config);
         const p = profileRes.data.profile;
         if (p) {
+          let sName = "";
+          const spouseId = Number(p.spouse_id);
+          if (Number.isInteger(spouseId) && spouseId > 0 && p.marital_status === "married") {
+            try {
+              const spouseRes = await axios.get(`http://localhost:5000/api/residents/${spouseId}`, config);
+              const s = spouseRes.data.resident;
+              if (s) {
+                sName = `${s.firstname} ${s.lastname}`;
+              }
+            } catch (spouseErr) {
+              console.warn("Spouse lookup failed, continuing without spouse name:", spouseErr.response?.data || spouseErr.message || spouseErr);
+            }
+          }
+
           setUserProfile({
+            ...p,
             name: `${p.firstname} ${p.lastname}`,
             email: p.email || "—",
             phone: p.phone_number || "—",
             kebele: "Heremata Mentina",
             address: p.address || "Jimma, Oromia, Ethiopia",
-            nationalId: `ETH-2026-0${p.resident_id}`,
-            joinedDate: p.created_at ? new Date(p.created_at).toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' }) : "—"
+            nationalId: `KBL-HM-2026-${String(p.resident_id).padStart(5, '0')}`,
+            joinedDate: p.created_at ? new Date(p.created_at).toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' }) : "—",
+            spouseName: sName
           });
         }
 
@@ -681,7 +974,7 @@ const ResidentDashboard = () => {
         setMyReports(reportsRes.data.reports || []);
       } catch (err) {
         console.error("Error loading resident dashboard data:", err);
-        setCertFetchError(err.response?.data?.error || "Could not load your certificates.");
+        setCertFetchError(err.response?.data?.error || err.message || "Could not load your dashboard data.");
       } finally {
         setLoading(false);
       }
@@ -693,9 +986,265 @@ const ResidentDashboard = () => {
   const initials = user.name.split(' ').map(n => n[0]).join('');
 
   const issuedCount = certificates.filter(c => c.status === 'issued' || c.status === 'approved').length;
+
+  // Downloads the ID card via the same backend PDF generator as all other certs.
+  // The approvedIdCert is resolved in the profile tab's conditional render.
+  const handleDownloadIDCard = async (certId) => {
+    if (!certId) {
+      alert('No approved ID card found. Please apply and wait for admin approval.');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const response = await axios.get(
+        `http://localhost:5000/api/residents/certificates/${certId}/download`,
+        { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }
+      );
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `Kebele_ID_${userProfile.firstname || 'Resident'}_${userProfile.lastname || 'Card'}.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(link.href);
+    } catch (err) {
+      console.error('ID card download failed:', err);
+      alert(err.response?.data?.error || 'Failed to download ID card. Please try again.');
+    }
+  };
+
+  const handlePrintIDCard = () => {
+    window.print();
+  };
+
+  const renderIDCardHTML = () => {
+    let photoUrl = null;
+    if (userProfile.photo_path) {
+      if (userProfile.photo_path.startsWith('http')) {
+        photoUrl = userProfile.photo_path;
+      } else if (userProfile.photo_path.startsWith('/')) {
+        photoUrl = userProfile.photo_path;
+      } else if (userProfile.photo_path.startsWith('uploads/')) {
+        photoUrl = '/' + userProfile.photo_path;
+      } else {
+        photoUrl = '/uploads/photos/' + userProfile.photo_path;
+      }
+    }
+    const isDisability = Number(userProfile.disability_status) === 1 ? "Yes / አዎ" : "No / የለም";
+    
+    const formatD = (dString) => {
+      if (!dString) return "—";
+      const d = new Date(dString);
+      if (isNaN(d.getTime())) return dString;
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    };
+
+    const birthDateStr = formatD(userProfile.birth_date);
+    const regDateStr = formatD(userProfile.registration_date || userProfile.created_at);
+    const issueDateStr = formatD(new Date());
+    const expiryDateStr = formatD(new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000));
+    
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box', position: 'relative' }}>
+        <div className="id-card-watermark">OFFICIAL DOCUMENT</div>
+        
+        {/* HEADER */}
+        <div className="id-card-header">
+          <div className="id-card-header-country">FEDERAL DEMOCRATIC REPUBLIC OF ETHIOPIA</div>
+          <div className="id-card-header-country-am">የኢትዮጵያ ፌዴራላዊ ዴሞክራሲያዊ ሪፐብሊክ</div>
+          
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, margin: '2px 0' }}>
+            <div className="id-card-stamp-box" style={{ width: 18, height: 18, fontSize: 4.5, border: '1px dashed white', color: 'white', margin: 0, padding: 0 }}>
+              SEAL
+            </div>
+            <div className="id-card-header-kebele">
+              Oromia Region · Jimma Zone · Jimma Woreda · Heremata Mentina Kebele<br />
+              ኦሮሚያ ክልል · ጅማ ዞን · ጅማ ወረዳ · ሔረማታ መንቲና ቀበሌ
+            </div>
+          </div>
+          
+          <div className="id-card-header-title">RESIDENT ID CARD / የቀበሌ ነዋሪ መታወቂያ ካርድ</div>
+          <div className="id-card-header-number">Card No / የመታወቂያ ቁጥር: {userProfile.nationalId}</div>
+        </div>
+
+        {/* BODY */}
+        <div className="id-card-body">
+          {/* PHOTO & PERSONAL INFO (Side-by-side) */}
+          <div className="id-card-row-top">
+            {/* Left Col (Photo & Thumb) */}
+            <div className="id-card-col-photo">
+              <div className="id-card-photo-box">
+                {photoUrl ? (
+                  <img src={photoUrl} alt="Resident Photo" className="id-card-photo-img" crossOrigin="anonymous" />
+                ) : (
+                  <div className="id-card-photo-placeholder">
+                    <span style={{ fontSize: 16 }}>👤</span><br />
+                    3x4cm Photo<br />ፎቶግራፍ
+                  </div>
+                )}
+              </div>
+              <div className="id-card-fingerprint-box">
+                <span style={{ fontSize: 14, color: '#b0bec5' }}>✋</span>
+                <div className="id-card-fingerprint-lbl">
+                  Right Thumb /<br />የቀኝ አውራ ጣት
+                </div>
+              </div>
+            </div>
+
+            {/* Right Col (Personal Details) */}
+            <div className="id-card-col-personal">
+              <table className="id-card-info-table">
+                <tbody>
+                  <tr>
+                    <td className="id-card-label">Full Name / ሙሉ ስም:</td>
+                    <td className="id-card-val" style={{ fontWeight: 'bold', fontSize: 10 }}>{userProfile.name}</td>
+                  </tr>
+                  <tr>
+                    <td className="id-card-label">Gender / ጾታ:</td>
+                    <td className="id-card-val">{userProfile.gender || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td className="id-card-label">Date of Birth / ልደት:</td>
+                    <td className="id-card-val">{birthDateStr}</td>
+                  </tr>
+                  <tr>
+                    <td className="id-card-label">Birthplace / ትውልድ ቦታ:</td>
+                    <td className="id-card-val">{userProfile.birthplace || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td className="id-card-label">Nationality / ዜግነት:</td>
+                    <td className="id-card-val">{userProfile.nationality || "Ethiopian / ኢትዮጵያዊ"}</td>
+                  </tr>
+                  <tr>
+                    <td className="id-card-label">Religion / ሃይማኖት:</td>
+                    <td className="id-card-val">{userProfile.religion || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td className="id-card-label">Marital Status / ጋብቻ:</td>
+                    <td className="id-card-val" style={{ textTransform: 'capitalize' }}>{userProfile.marital_status || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td className="id-card-label">Disability / አካል ጉዳት:</td>
+                    <td className="id-card-val">{isDisability}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* FAMILY SECTION */}
+          <div className="id-card-section-title">Family Information / የቤተሰብ መረጃ</div>
+          <div className="id-card-row-details">
+            <div>
+              <div className="id-card-label" style={{ width: '100%' }}>Father's Name / የአባት ስም:</div>
+              <div className="id-card-val" style={{ width: '100%', fontSize: 8.5 }}>{userProfile.father_name || "—"}</div>
+            </div>
+            <div>
+              <div className="id-card-label" style={{ width: '100%' }}>Mother's Name / የእናት ስም:</div>
+              <div className="id-card-val" style={{ width: '100%', fontSize: 8.5 }}>{userProfile.mother_name || "—"}</div>
+            </div>
+            {userProfile.marital_status === "married" && (
+              <div className="id-card-row-details-full">
+                <span className="id-card-label">Spouse Name / የትዳር አጋር ስም: </span>
+                <span className="id-card-val" style={{ fontSize: 8.5 }}>{userProfile.spouseName || "—"}</span>
+              </div>
+            )}
+          </div>
+
+          {/* ADDRESS SECTION */}
+          <div className="id-card-section-title">Address / አድራሻ</div>
+          <div className="id-card-row-details">
+            <div>
+              <div className="id-card-label" style={{ width: '100%' }}>Kebele & House No / የቤት ቁጥር:</div>
+              <div className="id-card-val" style={{ width: '100%' }}>HM - {userProfile.house_number || "—"}</div>
+            </div>
+            <div>
+              <div className="id-card-label" style={{ width: '100%' }}>Full Address / ሙሉ አድራሻ:</div>
+              <div className="id-card-val" style={{ width: '100%' }}>{userProfile.address || "—"}</div>
+            </div>
+          </div>
+
+          {/* CONTACT & OTHER INFO */}
+          <div className="id-card-section-title">Contact & Work / ግንኙነት እና ሥራ</div>
+          <div className="id-card-row-details">
+            <div>
+              <div className="id-card-label" style={{ width: '100%' }}>Phone / ስልክ:</div>
+              <div className="id-card-val" style={{ width: '100%' }}>{userProfile.phone || "—"}</div>
+            </div>
+            <div>
+              <div className="id-card-label" style={{ width: '100%' }}>Occupation / ሥራ:</div>
+              <div className="id-card-val" style={{ width: '100%' }}>{userProfile.occupation || "—"}</div>
+            </div>
+            <div>
+              <div className="id-card-label" style={{ width: '100%' }}>Education / ትምህርት:</div>
+              <div className="id-card-val" style={{ width: '100%' }}>{userProfile.education_level || "—"}</div>
+            </div>
+            <div>
+              <div className="id-card-label" style={{ width: '100%' }}>Emergency Contact / አደጋ ጊዜ ተጠሪ:</div>
+              <div className="id-card-val" style={{ width: '100%' }}>
+                {userProfile.emergency_contact_name || "—"} ({userProfile.emergency_contact_phone || "—"})
+              </div>
+            </div>
+          </div>
+
+          {/* CERTIFICATE DETAILS */}
+          <div className="id-card-section-title">Card Validity / የመታወቂያው ፀናነት</div>
+          <div className="id-card-row-details" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+            <div>
+              <div className="id-card-label" style={{ width: '100%' }}>Issue Date / የተሰጠበት:</div>
+              <div className="id-card-val" style={{ width: '100%' }}>{issueDateStr}</div>
+            </div>
+            <div>
+              <div className="id-card-label" style={{ width: '100%' }}>Expiry Date / የሚያበቃበት:</div>
+              <div className="id-card-val" style={{ width: '100%', color: '#d32f2f', fontWeight: 'bold' }}>{expiryDateStr}</div>
+            </div>
+            <div>
+              <div className="id-card-label" style={{ width: '100%' }}>Registration Date / ምዝገባ:</div>
+              <div className="id-card-val" style={{ width: '100%' }}>{regDateStr}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* FOOTER */}
+        <div className="id-card-footer">
+          <div className="id-card-signatures">
+            <div className="id-card-sig-line" style={{ marginTop: 15 }}>
+              Registrar Signature / ሬጅስትራር
+            </div>
+            
+            <div className="id-card-stamp-box">
+              OFFICIAL<br />STAMP<br />ማህተም
+            </div>
+
+            <div className="id-card-sig-line" style={{ marginTop: 15 }}>
+              Kebele Manager / ሥራ አስኪያጅ
+            </div>
+          </div>
+          <div className="id-card-warning">
+            This card is official and valid only with official stamp and signatures.<br />
+            ይህ መታወቂያ የሚፀናው ኦፊሴላዊ ማህተም እና ፊርማዎች ሲኖሩት ብቻ ነው።
+          </div>
+        </div>
+      </div>
+    );
+  };
   const pendingCount = certificates.filter(c =>
     ['pending', 'assigned', 'processing', 'ready_for_approval'].includes(c.status)
   ).length;
+
+  // Determine ID-card / residency certificate approval state for the profile tab
+  const idCertTypes = ['residency-id', 'residency'];
+  const approvedIdCert = certificates.find(
+    c => idCertTypes.includes(c.certificate_type) && (c.status === 'approved' || c.status === 'issued')
+  );
+  const rejectedIdCert = !approvedIdCert && certificates.find(
+    c => idCertTypes.includes(c.certificate_type) && c.status === 'rejected'
+  );
+  const pendingIdCert = !approvedIdCert && !rejectedIdCert && certificates.find(
+    c => idCertTypes.includes(c.certificate_type)
+  );
 
   const filteredCertificates = useMemo(() => {
     const q = certQuery.trim().toLowerCase();
@@ -751,61 +1300,24 @@ const ResidentDashboard = () => {
 
   const downloadCertificate = async (cert) => {
     if (cert.status !== 'approved' && cert.status !== 'issued') {
-      alert(`❌ This certificate status is '${cert.status}'. It must be approved/issued by the admin.`);
+      alert(`❌ This certificate is '${cert.status}'. It must be approved by the admin before you can download it.`);
       return;
     }
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const response = await axios.get(
         `http://localhost:5000/api/residents/certificates/${cert.id}/download`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          responseType: 'blob'
-        }
+        { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }
       );
-      
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);
-      link.download = `${cert.certificate_type || "Certificate"}_${cert.id}.pdf`;
+      link.download = `${cert.certificate_type || 'Certificate'}_${cert.id}.pdf`;
       link.click();
       window.URL.revokeObjectURL(link.href);
-      alert(`✅ Certificate downloaded!`);
     } catch (err) {
-      console.error("Backend download failed, falling back to frontend canvas:", err);
-      alert("Attempting frontend PDF generation fallback...");
-      try {
-        let certHTML = '';
-        const cType = cert.certificate_type || cert.type;
-        const cId = cert.certificateId || cert.id;
-        const cDate = cert.requested_at ? new Date(cert.requested_at).toLocaleDateString() : cert.requested_at;
-        if (cType === 'birth') {
-          certHTML = `<div style="width:950px;padding:60px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:18px solid #1e40af;font-family:Arial,sans-serif;"><div style="text-align:center;border-bottom:3px solid #1e40af;padding-bottom:30px;margin-bottom:40px;"><div style="font-size:50px;margin-bottom:10px;">🏛️</div><h1 style="color:#1e40af;font-size:30px;margin:0;letter-spacing:2px;">HEREMATA MENTINA KEBELE</h1><p style="color:#475569;margin:8px 0;font-size:15px;">Official Vital Records Office • Jimma, Oromia, Ethiopia</p><h2 style="color:#1e40af;font-size:28px;margin:15px 0 0;">BIRTH CERTIFICATE</h2></div><div style="text-align:center;margin:30px 0;"><p style="font-size:18px;color:#475569;">This is to officially certify that</p><div style="display:inline-block;border-bottom:2px solid #1e40af;padding:10px 40px;margin:15px 0;"><h3 style="font-size:36px;color:#1e40af;margin:0;font-weight:bold;">${cert.child_name || '—'}</h3></div><div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:left;max-width:600px;margin-left:auto;margin-right:auto;font-size:16px;"><p><strong>Date of Birth:</strong> ${cert.birth_date ? new Date(cert.birth_date).toLocaleDateString() : 'N/A'}</p><p><strong>Place of Birth:</strong> ${cert.birth_place || 'N/A'}</p><p><strong>Father's Name:</strong> ${cert.father_name || 'N/A'}</p><p><strong>Mother's Name:</strong> ${cert.mother_name || 'N/A'}</p></div></div><div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:40px;"><div style="font-size:16px;line-height:2;"><p style="margin:0;"><strong>Certificate ID:</strong> <span style="color:#1e40af;">${cId}</span></p><p style="margin:0;"><strong>Date of Issue:</strong> ${cDate}</p><p style="margin:0;"><strong>Kebele:</strong> ${user.kebele}</p><p style="margin:0;"><strong>Status:</strong> <span style="color:#16a34a;font-weight:bold;">OFFICIALLY ISSUED</span></p></div><div style="text-align:center;"><div style="width:140px;height:140px;border:5px solid #1e40af;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;background:#e0f2fe;"><span style="font-size:60px;">👶</span></div><p style="font-size:13px;color:#475569;margin-top:10px;">Official Seal</p></div></div><div style="text-align:center;margin-top:40px;border-top:1px solid #bfdbfe;padding-top:20px;"><p style="color:#64748b;font-size:13px;">This document is issued by the Kebele Administration Office and is legally valid.</p></div></div>`;
-        } else if (cType === 'marriage') {
-          certHTML = `<div style="width:950px;padding:60px;background:linear-gradient(135deg,#fff7ed,#fef3c7);border:18px double #92400e;font-family:Georgia,serif;"><div style="text-align:center;margin-bottom:30px;"><div style="font-size:50px;margin-bottom:10px;">🏛️</div><h1 style="color:#92400e;font-size:30px;margin:0;letter-spacing:2px;">HEREMATA MENTINA KEBELE</h1><p style="color:#78716c;font-size:15px;margin:8px 0;">Official Marriage Registry • Jimma, Oromia, Ethiopia</p><h2 style="color:#92400e;font-size:32px;margin:20px 0 0;">✦ MARRIAGE CERTIFICATE ✦</h2></div><div style="text-align:center;margin:30px 0;"><p style="font-size:18px;color:#78716c;font-style:italic;">This is to solemnly certify the holy union between</p><h3 style="font-size:32px;color:#92400e;margin:15px 0;border-bottom:2px solid #f59e0b;display:inline-block;padding:10px 50px;">${cert.husband_name || '—'} & ${cert.wife_name || '—'}</h3><div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:left;max-width:600px;margin-left:auto;margin-right:auto;font-size:16px;font-family:Arial,sans-serif;"><p><strong>Marriage Date:</strong> ${cert.marriage_date ? new Date(cert.marriage_date).toLocaleDateString() : 'N/A'}</p><p><strong>Marriage Place:</strong> ${cert.marriage_place || 'N/A'}</p><p style="grid-column: span 2;"><strong>Witness Name:</strong> ${cert.witness_name || 'N/A'}</p></div></div><div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:40px;"><div style="font-size:16px;line-height:2;font-family:Arial,sans-serif;"><p style="margin:0;"><strong>Certificate ID:</strong> ${cId}</p><p style="margin:0;"><strong>Date of Issue:</strong> ${cDate}</p><p style="margin:0;"><strong>Kebele:</strong> ${user.kebele}</p><p style="margin:0;"><strong>Status:</strong> <span style="color:#16a34a;font-weight:bold;">OFFICIALLY ISSUED</span></p></div><div style="text-align:center;"><div style="width:140px;height:140px;border:5px solid #92400e;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fef3c7;"><span style="font-size:60px;">💍</span></div><p style="font-size:13px;color:#78716c;margin-top:10px;">Official Seal</p></div></div></div>`;
-        } else if (cType === 'death') {
-          certHTML = `<div style="width:950px;padding:60px;background:#f8fafc;border:18px solid #334155;font-family:Arial,sans-serif;"><div style="text-align:center;border-bottom:2px solid #334155;padding-bottom:30px;margin-bottom:40px;"><div style="font-size:50px;margin-bottom:10px;">🏛️</div><h1 style="color:#334155;font-size:30px;margin:0;">HEREMATA MENTINA KEBELE</h1><p style="color:#64748b;font-size:15px;margin:8px 0;">Official Vital Records Office • Jimma, Oromia, Ethiopia</p><h2 style="color:#334155;font-size:28px;margin:15px 0 0;">DEATH CERTIFICATE</h2></div><div style="text-align:center;margin:30px 0;"><p style="font-size:18px;color:#64748b;">This is to officially certify the death of</p><div style="border:2px solid #334155;display:inline-block;padding:15px 50px;margin:15px 0;"><h3 style="font-size:36px;color:#334155;margin:0;">${cert.child_name || '—'}</h3></div><div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:left;max-width:600px;margin-left:auto;margin-right:auto;font-size:16px;"><p><strong>Date of Death:</strong> ${cert.death_date ? new Date(cert.death_date).toLocaleDateString() : 'N/A'}</p><p><strong>Place of Death:</strong> ${cert.death_place || 'N/A'}</p><p style="grid-column: span 2;"><strong>Cause of Death:</strong> ${cert.cause_of_death || 'N/A'}</p></div></div><div style="display:flex;justify-content:space-between;margin-top:40px;"><div style="font-size:16px;line-height:2;"><p><strong>Certificate ID:</strong> ${cId}</p><p><strong>Date of Issue:</strong> ${cDate}</p><p><strong>Kebele:</strong> ${user.kebele}</p><p><strong>Status:</strong> <span style="color:#16a34a;">OFFICIALLY ISSUED</span></p></div><div style="text-align:center;"><div style="width:140px;height:140px;border:5px solid #334155;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#f1f5f9;"><span style="font-size:60px;">🏛️</span></div><p style="font-size:13px;color:#64748b;margin-top:10px;">Official Seal</p></div></div></div>`;
-        } else {
-          certHTML = `<div style="width:950px;padding:60px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:18px solid #166534;font-family:Arial,sans-serif;"><div style="text-align:center;border-bottom:3px solid #166534;padding-bottom:30px;margin-bottom:40px;"><div style="font-size:50px;margin-bottom:10px;">🏛️</div><h1 style="color:#166534;font-size:30px;margin:0;">HEREMATA MENTINA KEBELE</h1><p style="color:#4b5563;font-size:15px;margin:8px 0;">Official Records Office • Jimma, Oromia, Ethiopia</p><h2 style="color:#166534;font-size:28px;margin:15px 0 0;">${cType.toUpperCase()} CERTIFICATE</h2></div><div style="text-align:center;margin:50px 0;"><p style="font-size:18px;color:#4b5563;">This is to certify that</p><h3 style="font-size:38px;color:#166534;margin:20px 0;">${cert.child_name || user.name}</h3></div><div style="display:flex;justify-content:space-between;margin-top:60px;font-size:16px;line-height:2;"><div><p><strong>Certificate ID:</strong> ${cId}</p><p><strong>Date of Issue:</strong> ${cDate}</p><p><strong>Kebele:</strong> ${user.kebele}</p></div><div style="width:160px;height:160px;border:5px solid #166534;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#dcfce7;"><span style="font-size:70px;">🪪</span></div></div></div>`;
-        }
-  
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = certHTML;
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.left = '-10000px';
-        document.body.appendChild(tempDiv);
-        const canvas = await html2canvas(tempDiv.firstElementChild, { scale: 2, useCORS: true });
-        document.body.removeChild(tempDiv);
-        const pdf = new jsPDF('landscape', 'px', [canvas.width, canvas.height]);
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
-        pdf.save(`${cType}_Certificate_${cId}.pdf`);
-        alert(`✅ ${cType} Certificate downloaded via fallback!`);
-      } catch (fallbackErr) {
-        console.error("Fallback failed:", fallbackErr);
-        alert("Failed to generate PDF. Please try again.");
-      }
+      console.error('Certificate download failed:', err);
+      alert(err.response?.data?.error || 'Failed to download certificate. Please try again.');
     }
   };
 
@@ -1205,33 +1717,150 @@ const ResidentDashboard = () => {
               <div style={{ marginBottom: 24 }}>
                 <div className="kd-welcome-title" style={{ fontSize: 22 }}>My Profile</div>
                 <div style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
-                  Your personal information and account details
+                  Your personal information and official Kebele ID card
                 </div>
               </div>
 
+              {/* ── ID CARD STATUS BANNER ── */}
+              {approvedIdCert ? (
+                /* Approved: show ID card preview + download/print */
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{
+                    display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between',
+                    alignItems: 'center', gap: 12, padding: '14px 20px',
+                    background: '#f0fdf4', border: '1.5px solid #bbf7d0',
+                    borderRadius: 14, marginBottom: 16
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <CheckCircle style={{ color: '#16a34a', width: 22, height: 22 }} />
+                      <div>
+                        <div style={{ fontWeight: 700, color: '#15803d', fontSize: 14 }}>ID Card Approved</div>
+                        <div style={{ fontSize: 12, color: '#166534' }}>
+                          Your Kebele ID card has been approved and is ready to download.
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button
+                        onClick={() => handleDownloadIDCard(approvedIdCert?.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          backgroundColor: '#10b981', color: 'white', border: 'none',
+                          borderRadius: 10, padding: '10px 18px', fontSize: 14,
+                          fontWeight: 600, cursor: 'pointer',
+                          boxShadow: '0 2px 4px rgba(16,185,129,0.2)'
+                        }}
+                      >
+                        <Download style={{ width: 16, height: 16 }} /> Download ID Card
+                      </button>
+                      <button
+                        onClick={handlePrintIDCard}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          backgroundColor: '#4f46e5', color: 'white', border: 'none',
+                          borderRadius: 10, padding: '10px 18px', fontSize: 14,
+                          fontWeight: 600, cursor: 'pointer',
+                          boxShadow: '0 2px 4px rgba(79,70,229,0.2)'
+                        }}
+                      >
+                        <Printer style={{ width: 16, height: 16 }} /> Print ID Card
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Offscreen ID Card for jsPDF */}
+                  <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+                    <div id="ethiopian-kebele-id-card" className="id-card-container">
+                      {renderIDCardHTML()}
+                    </div>
+                  </div>
+                  {/* Print-only container */}
+                  <div className="id-card-print-container">
+                    <div className="id-card-container">{renderIDCardHTML()}</div>
+                  </div>
+                </div>
+              ) : rejectedIdCert ? (
+                /* Rejected: show rejection banner */
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 12,
+                  padding: '16px 20px', background: '#fef2f2',
+                  border: '1.5px solid #fecaca', borderRadius: 14, marginBottom: 24
+                }}>
+                  <Shield style={{ color: '#b91c1c', width: 22, height: 22, flexShrink: 0, marginTop: 2 }} />
+                  <div>
+                    <div style={{ fontWeight: 700, color: '#b91c1c', fontSize: 14 }}>
+                      Registration Rejected
+                    </div>
+                    <div style={{ fontSize: 13, color: '#dc2626', marginTop: 4 }}>
+                      This resident registration has been rejected.
+                    </div>
+                    {rejectedIdCert.rejection_reason && (
+                      <div style={{
+                        marginTop: 8, fontSize: 12, color: '#7f1d1d',
+                        background: '#fee2e2', padding: '8px 12px', borderRadius: 8
+                      }}>
+                        <strong>Reason:</strong> {rejectedIdCert.rejection_reason}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 12, color: '#991b1b', marginTop: 8 }}>
+                      Please visit the Kebele office or submit a new application to appeal.
+                    </div>
+                  </div>
+                </div>
+              ) : pendingIdCert ? (
+                /* Pending / In-progress: show waiting banner */
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '14px 20px', background: '#fffbeb',
+                  border: '1.5px solid #fde68a', borderRadius: 14, marginBottom: 24
+                }}>
+                  <Clock style={{ color: '#d97706', width: 22, height: 22, flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontWeight: 700, color: '#b45309', fontSize: 14 }}>
+                      Awaiting Admin Approval
+                    </div>
+                    <div style={{ fontSize: 13, color: '#92400e', marginTop: 2 }}>
+                      ID Card will be available after admin approval. Current status:{' '}
+                      <strong style={{ textTransform: 'capitalize' }}>{pendingIdCert.status.replace(/_/g, ' ')}</strong>.
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               <div className="kd-profile-wrap">
-                <div className="kd-profile-header">
-                  <div className="kd-profile-avatar">{initials}</div>
+                <div className="kd-profile-header" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  {user.photo_path ? (
+                    <img 
+                      src={`/uploads/photos/${user.photo_path}`} 
+                      alt="Profile" 
+                      style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: '3px solid #2563eb' }} 
+                    />
+                  ) : (
+                    <div className="kd-profile-avatar">{initials}</div>
+                  )}
                   <div>
                     <div className="kd-profile-name">{user.name}</div>
-                    <div className="kd-profile-role">Registered Resident</div>
+                    <div className="kd-profile-role">Registered Kebele Resident</div>
                     <div className="kd-profile-since">Member since {user.joinedDate}</div>
                   </div>
                 </div>
 
-                <div className="kd-profile-card">
+                <div className="kd-profile-card" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
                   {[
                     { icon: <Mail />, label: 'Email Address', value: user.email },
                     { icon: <Phone />, label: 'Phone Number', value: user.phone },
-                    { icon: <MapPin />, label: 'Address', value: user.address },
-                    { icon: <Shield />, label: 'National ID', value: user.nationalId },
-                    { icon: <FileText />, label: 'Kebele', value: user.kebele },
+                    { icon: <MapPin />, label: 'Address & House No', value: `${user.address} (House No: HM-${user.house_number || '—'})` },
+                    { icon: <Shield />, label: 'National ID Number', value: user.nationalId },
+                    { icon: <User />, label: 'Personal Specs', value: `Gender: ${user.gender || '—'} · Marital: ${user.marital_status || '—'}` },
+                    { icon: <FileText />, label: 'Family Details', value: `Father: ${user.father_name || '—'} · Mother: ${user.mother_name || '—'} ${user.spouseName ? `· Spouse: ${user.spouseName}` : ''}` },
+                    { icon: <Briefcase className="w-5 h-5" />, label: 'Occupation & Education', value: `${user.occupation || '—'} (${user.education_level || '—'})` },
+                    { icon: <AlertTriangle />, label: 'Emergency Contact', value: `${user.emergency_contact_name || '—'} (${user.emergency_contact_phone || '—'})` },
                   ].map(({ icon, label, value }) => (
-                    <div key={label} className="kd-profile-row">
-                      <div className="kd-prof-icon">{icon}</div>
+                    <div key={label} className="kd-profile-row" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <div className="kd-prof-icon" style={{ marginTop: 2 }}>{icon}</div>
                       <div>
                         <div className="kd-prof-lbl">{label}</div>
-                        <div className="kd-prof-val">{value}</div>
+                        <div className="kd-prof-val" style={{ fontSize: 13, wordBreak: 'break-word' }}>{value}</div>
                       </div>
                     </div>
                   ))}

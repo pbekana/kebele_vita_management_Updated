@@ -23,6 +23,26 @@ async function tableExists(pool, table) {
  */
 async function applyCertificateWorkflowMigration(pool) {
   try {
+    // Check and add spouse_id to residents table
+    const [spouseColExists] = await pool.query(
+      `SELECT COUNT(*) AS c FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'residents' AND COLUMN_NAME = 'spouse_id'`
+    );
+    if (Number(spouseColExists[0].c) === 0) {
+      await pool.query(`ALTER TABLE residents ADD COLUMN spouse_id INT NULL`);
+      try {
+        await pool.query(`
+          ALTER TABLE residents
+          ADD CONSTRAINT fk_residents_spouse
+          FOREIGN KEY (spouse_id) REFERENCES residents(id)
+          ON DELETE SET NULL
+        `);
+        logger.info(`Migration: added residents.spouse_id column and foreign key constraint`);
+      } catch (fkErr) {
+        logger.warn(`Migration: spouse_id column added but FK constraint failed: ${fkErr.message}`);
+      }
+    }
+
     if (!(await tableExists(pool, 'certificates'))) {
       return;
     }

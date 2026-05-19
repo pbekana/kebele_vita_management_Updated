@@ -147,3 +147,17 @@
 [2026-05-19T09:30:09.703Z] [INFO] Admin 1 assigned certificate 9 to staff 4
 [2026-05-19T09:31:25.602Z] [INFO] Staff 4 prepared certificate 9 for admin approval
 [2026-05-19T09:32:02.039Z] [INFO] Admin 1 approved certificate 9
+[2026-05-19T10:38:56.072Z] [INFO] Server running on port 5000
+[2026-05-19T10:53:09.399Z] [INFO] Server running on port 5000
+[2026-05-19T11:16:05.826Z] [INFO] Server running on port 5000
+[2026-05-19T12:18:10.790Z] [INFO] Server running on port 5000
+[2026-05-19T12:40:26.625Z] [INFO] Server running on port 5000
+[2026-05-19T12:40:41.221Z] [ERROR] Error: secretOrPrivateKey must have a value
+[2026-05-19T12:41:29.940Z] [INFO] Server running on port 5000
+[2026-05-19T12:57:53.505Z] [INFO] Server running on port 5000
+[2026-05-19T16:17:45.619Z] [INFO] Server running on port 5000
+[2026-05-19T16:34:56.271Z] [INFO] Admin 1 assigned certificate 5 to staff 2
+[2026-05-19T16:36:38.481Z] [INFO] Staff 2 started processing certificate 5
+[2026-05-19T16:37:12.905Z] [INFO] Staff 2 prepared certificate 5 for admin approval
+[2026-05-19T16:40:04.507Z] [INFO] Admin 1 approved certificate 5
+[2026-05-19T17:48:07.113Z] [INFO] Server running on port 5000
