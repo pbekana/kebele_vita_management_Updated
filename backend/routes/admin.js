@@ -5,7 +5,7 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 const {
   createUser, activateUser, deactivateUser, listUsers,
   assignKebeleStaff, assignCertificate, approveCertificate, getStaffList,
-  getCertificates, rejectCertificate
+  getCertificates, rejectCertificate, getReports, updateReportStatus
 } = require('../controllers/adminController');
 const {
   createTask, getAllTasks, reassignTask
@@ -38,6 +38,7 @@ router.get('/staff', getStaffList);
 
 router.get('/tasks', getAllTasks);
 router.post('/tasks/create', createTaskValidator, createTask);
-router.put('/tasks/:id/reassign', reassignTask);
+router.get('/reports', getReports);
+router.put('/reports/:id/status', updateReportStatus);
 
 module.exports = router;

@@ -43,8 +43,7 @@ async function writeGeneratedPdf(cert, residentFullName) {
     stream.on('error', reject);
     generateCertificate(
       {
-        id: cert.id,
-        certificate_type: cert.certificate_type,
+        ...cert,
         resident_name: residentFullName,
         issue_date: cert.issue_date || new Date(),
       },
@@ -725,6 +724,60 @@ const rejectCertificate = async (req, res) => {
   }
 };
 
+const getReports = async (req, res) => {
+  try {
+    const [reports] = await pool.query(`
+      SELECT
+        rp.id,
+        rp.title,
+        rp.category,
+        rp.description,
+        rp.status,
+        rp.response,
+        rp.created_at,
+        CONCAT(r.firstname, ' ', r.lastname) AS resident,
+        u.email AS resident_email
+      FROM report rp
+      INNER JOIN residents r ON rp.resident_id = r.id
+      INNER JOIN users u ON r.user_id = u.id
+      ORDER BY rp.created_at DESC
+    `);
+
+    return res.status(200).json({
+      count: reports.length,
+      reports,
+    });
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
+const resolveReport = async (req, res) => {
+  const reportId = Number(req.params.id);
+  const { response } = req.body;
+
+  if (!Number.isInteger(reportId)) {
+    return res.status(400).json({ error: 'Invalid report ID' });
+  }
+
+  try {
+    const [result] = await pool.query(
+      `UPDATE report
+       SET status = 'completed', response = ?
+       WHERE id = ?`,
+      [response || null, reportId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    return res.status(200).json({ message: 'Report resolved successfully' });
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
 module.exports = {
   getStaffProfile,
   getMyTasks,
@@ -740,4 +793,6 @@ module.exports = {
   markCertificateReadyForApproval,
   prepareCertificate,
   rejectCertificate,
+  getReports,
+  resolveReport,
 };

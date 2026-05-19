@@ -18,6 +18,8 @@ const {
   markCertificateReadyForApproval,
   prepareCertificate,
   rejectCertificate,
+  getReports,
+  resolveReport,
 } = require('../controllers/kebeleStafsController');
 
 // AUTH
@@ -45,5 +47,9 @@ router.put('/tasks/:id/complete', completeTask);
 // FILTERS
 router.get('/tasks/type/:type', getTasksByType);
 router.get('/tasks/status/:status', getTasksByStatus);
+
+// REPORTS
+router.get('/reports', getReports);
+router.put('/reports/:id/resolve', resolveReport);
 
 module.exports = router;

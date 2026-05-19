@@ -52,6 +52,10 @@ async function applyCertificateWorkflowMigration(pool) {
       'ready_for_approval_at',
       'ADD COLUMN ready_for_approval_at TIMESTAMP NULL'
     );
+    await addCol(
+      'death_place',
+      'ADD COLUMN death_place VARCHAR(255) NULL'
+    );
 
     const fkSpecs = [
       { col: 'assigned_staff_user_id', name: 'fk_certificates_assigned_staff' },

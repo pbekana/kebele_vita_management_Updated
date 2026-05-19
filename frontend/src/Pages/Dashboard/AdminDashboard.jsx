@@ -9,9 +9,12 @@ const API = 'http://localhost:5000/api';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [reportImages, setReportImages] = useState([]);
+  const [reportsList, setReportsList] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
   const [investigationNotes, setInvestigationNotes] = useState('');
-  const [reportImages, setReportImages] = useState([]);
+  const [statusToUpdate, setStatusToUpdate] = useState('');
+  const [assignedToStaffId, setAssignedToStaffId] = useState('');
 
   // New states for Staff and Tasks
   const [staffList, setStaffList] = useState([]);
@@ -50,6 +53,50 @@ const AdminDashboard = () => {
     setInProgressTotal(pRes.data.total ?? pRes.data.count ?? 0);
   };
 
+  const refreshReports = async () => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const res = await axios.get(`${API}/admin/reports`, config);
+      setReportsList(res.data.reports || []);
+    } catch (err) {
+      console.error('Error fetching reports:', err);
+    }
+  };
+
+  const handleSaveInvestigation = async () => {
+    if (!selectedReport) return;
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      const newStatus = statusToUpdate || (assignedToStaffId === '6' ? 'in_review' : 'pending');
+      await axios.put(`${API}/admin/reports/${selectedReport.id}/status`, { status: newStatus }, config);
+      
+      if (assignedToStaffId === '6') {
+        const taskData = {
+          title: `Resolve Issue: ${selectedReport.title || selectedReport.category}`,
+          description: `Resident report #${selectedReport.id}: ${selectedReport.description}`,
+          task_type: 'issue_report',
+          assigned_to: 6,
+          resident_id: selectedReport.resident_id || null,
+          status: 'pending',
+          due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        };
+        await axios.post(`${API}/admin/tasks/create`, taskData, config);
+      }
+
+      setSelectedReport(null);
+      setAssignedToStaffId('');
+      setInvestigationNotes('');
+      await refreshReports();
+      alert("Report investigation updated successfully!");
+    } catch (err) {
+      console.error("Failed to update status and assign staff:", err);
+      alert("Failed to update status and assign staff. Please try again.");
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -62,6 +109,10 @@ const AdminDashboard = () => {
           await refreshCertificates();
           const staffRes = await axios.get(`${API}/admin/staff`, config);
           setCertStaffList(staffRes.data.staff || []);
+        }
+
+        if (activeTab === 'overview' || activeTab === 'reports') {
+          await refreshReports();
         }
 
         if (activeTab === 'staff' || activeTab === 'tasks') {
@@ -826,6 +877,7 @@ const AdminDashboard = () => {
                     <table className="w-full">
                       <thead className="bg-gray-50 border-b">
                         <tr>
+                          <th className="px-6 py-4 text-left font-semibold">Title</th>
                           <th className="px-6 py-4 text-left font-semibold">Category</th>
                           <th className="px-6 py-4 text-left font-semibold">Reporter</th>
                           <th className="px-6 py-4 text-left font-semibold">Description</th>
@@ -835,31 +887,35 @@ const AdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {[
-                          { id: 1, category: "Road Damage", reporter: "Abebe T.", description: "Large pothole on main road affecting traffic", date: "2025-05-12", status: "open", hasImages: true },
-                          { id: 2, category: "Water Supply Problem", reporter: "Meron A.", description: "No water supply in residential area for 3 days", date: "2025-05-11", status: "in-progress", hasImages: true },
-                          { id: 3, category: "Electricity Outage", reporter: "Yohannes M.", description: "Power outage affecting entire kebele since morning", date: "2025-05-10", status: "resolved", hasImages: false },
-                          { id: 4, category: "Sanitation / Waste", reporter: "Sara K.", description: "Garbage collection not done for 2 weeks", date: "2025-05-09", status: "open", hasImages: true },
-                          { id: 5, category: "Security Concern", reporter: "Daniel A.", description: "Suspicious activity in residential area at night", date: "2025-05-08", status: "resolved", hasImages: false },
-                        ].map(report => (
+                        {reportsList.map(report => (
                           <tr key={report.id} className="border-b hover:bg-gray-50">
-                            <td className="px-6 py-4 font-medium">{report.category}</td>
+                            <td className="px-6 py-4 font-medium">{report.title || "No Title"}</td>
+                            <td className="px-6 py-4 text-sm">{report.category}</td>
                             <td className="px-6 py-4 text-sm">{report.reporter}</td>
                             <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">{report.description}</td>
-                            <td className="px-6 py-4 text-sm text-gray-600">{report.date}</td>
+                            <td className="px-6 py-4 text-sm text-gray-600">{new Date(report.created_at).toLocaleDateString()}</td>
                             <td className="px-6 py-4">
-                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${report.status === 'open' ? 'bg-red-100 text-red-700' :
-                                  report.status === 'in-progress' ? 'bg-yellow-100 text-yellow-700' :
-                                    'bg-green-100 text-green-700'
+                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${report.status === 'pending' ? 'bg-red-100 text-red-700' :
+                                  report.status === 'in_review' ? 'bg-yellow-100 text-yellow-700' :
+                                  report.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                     'bg-gray-100 text-gray-700'
                                 }`}>
-                                {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
+                                {report.status.replace('_', ' ').toUpperCase()}
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                          <button className="text-blue-600 hover:underline text-sm font-medium">View Details</button>
-                        </td>
+                              <button 
+                                onClick={() => { setSelectedReport(report); setStatusToUpdate(report.status); }} 
+                                className="text-blue-600 hover:underline text-sm font-medium"
+                              >
+                                View Details
+                              </button>
+                            </td>
                           </tr>
                         ))}
+                        {reportsList.length === 0 && (
+                          <tr><td colSpan="7" className="px-6 py-4 text-center text-gray-500">No reports found.</td></tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -869,8 +925,11 @@ const AdminDashboard = () => {
                   <button onClick={() => setSelectedReport(null)} className="text-blue-600 hover:underline font-medium mb-6">← Back to Reports</button>
 
                   <h3 className="text-2xl font-semibold mb-6">Investigate Report #{selectedReport.id}</h3>
-
                   <div className="grid md:grid-cols-2 gap-8 mb-8 pb-8 border-b">
+                    <div>
+                      <label className="text-xs uppercase tracking-widest text-gray-500 font-semibold">Title</label>
+                      <p className="text-lg font-medium mt-1">{selectedReport.title || "No Title"}</p>
+                    </div>
                     <div>
                       <label className="text-xs uppercase tracking-widest text-gray-500 font-semibold">Category</label>
                       <p className="text-lg font-medium mt-1">{selectedReport.category}</p>
@@ -881,15 +940,16 @@ const AdminDashboard = () => {
                     </div>
                     <div>
                       <label className="text-xs uppercase tracking-widest text-gray-500 font-semibold">Date Reported</label>
-                      <p className="text-lg font-medium mt-1">{selectedReport.date}</p>
+                      <p className="text-lg font-medium mt-1">{new Date(selectedReport.created_at).toLocaleDateString()}</p>
                     </div>
                     <div>
                       <label className="text-xs uppercase tracking-widest text-gray-500 font-semibold">Status</label>
-                      <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mt-1 ${selectedReport.status === 'open' ? 'bg-red-100 text-red-700' :
-                          selectedReport.status === 'in-progress' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-green-100 text-green-700'
+                      <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mt-1 ${selectedReport.status === 'pending' ? 'bg-red-100 text-red-700' :
+                          selectedReport.status === 'in_review' ? 'bg-yellow-100 text-yellow-700' :
+                          selectedReport.status === 'completed' ? 'bg-green-100 text-green-700' :
+                            'bg-gray-100 text-gray-700'
                         }`}>
-                        {selectedReport.status.toUpperCase()}
+                        {selectedReport.status.replace('_', ' ').toUpperCase()}
                       </span>
                     </div>
                   </div>
@@ -941,22 +1001,29 @@ const AdminDashboard = () => {
                   </div>
 
                   <div className="grid sm:grid-cols-2 gap-4 mb-6">
-                    <select className="px-4 py-3 border rounded-lg font-medium focus:ring-2 focus:ring-blue-500">
-                      <option>Assign to: Select Staff</option>
-                      <option>Abebe Bikila</option>
-                      <option>Almaz Genene</option>
-                      <option>Yohannes Mesfin</option>
+                    <select 
+                      value={assignedToStaffId}
+                      onChange={(e) => setAssignedToStaffId(e.target.value)}
+                      className="px-4 py-3 border rounded-lg font-medium focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Assign to: Select Staff</option>
+                      <option value="6">Selamawit (Reports Officer)</option>
                     </select>
-                    <select className="px-4 py-3 border rounded-lg font-medium focus:ring-2 focus:ring-blue-500">
+                    <select 
+                      value={statusToUpdate}
+                      onChange={(e) => setStatusToUpdate(e.target.value)}
+                      className="px-4 py-3 border rounded-lg font-medium focus:ring-2 focus:ring-blue-500"
+                    >
                       <option value="">Update Status...</option>
-                      <option value="open">Open</option>
-                      <option value="in-progress">In Progress</option>
-                      <option value="resolved">Resolved</option>
+                      <option value="pending">Pending (Open)</option>
+                      <option value="in_review">In Review (In Progress)</option>
+                      <option value="completed">Completed (Resolved)</option>
+                      <option value="rejected">Rejected</option>
                     </select>
                   </div>
 
                   <div className="flex gap-4">
-                    <button className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-semibold transition">Save Investigation</button>
+                    <button onClick={handleSaveInvestigation} className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-semibold transition">Save Investigation</button>
                     <button onClick={() => setSelectedReport(null)} className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg hover:bg-gray-300 font-semibold transition">Cancel</button>
                   </div>
                 </div>

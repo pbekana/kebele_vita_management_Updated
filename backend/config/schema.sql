@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS certificates (
   birth_date DATE,
   death_date DATE,
   cause_of_death TEXT,
+  death_place VARCHAR(255),
   husband_name VARCHAR(255),
   wife_name VARCHAR(255),
   marriage_date DATE,
@@ -97,8 +98,11 @@ CREATE TABLE IF NOT EXISTS certificates (
 CREATE TABLE IF NOT EXISTS report (
   id INT AUTO_INCREMENT PRIMARY KEY,
   resident_id INT NOT NULL,
+  title VARCHAR(255),
+  category VARCHAR(100),
   description TEXT,
   status ENUM('pending','in_review','completed','rejected') DEFAULT 'pending',
+  response TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (resident_id) REFERENCES residents(id) ON DELETE CASCADE

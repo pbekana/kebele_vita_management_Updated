@@ -382,22 +382,110 @@ export default function StaffCertificateRequestsPanel({ title, headerIcon: Heade
               <p className="text-gray-500">Loading…</p>
             ) : (
               <>
-                <div className="space-y-2 text-sm mb-4">
-                  <p>
-                    <span className="text-gray-500">Type:</span>{" "}
-                    <strong>{(detail.certificate_type || "").toUpperCase()}</strong>
-                  </p>
-                  <p>
-                    <span className="text-gray-500">Resident:</span>{" "}
-                    {detail.resident_firstname} {detail.resident_lastname}
-                  </p>
-                  <p>
-                    <span className="text-gray-500">Status:</span> <StatusBadge status={detail.status} />
-                  </p>
-                  <p>
-                    <span className="text-gray-500">Child / subject:</span>{" "}
-                    {detail.child_name || detail.husband_name || "—"}
-                  </p>
+                <div className="space-y-4 text-sm mb-4">
+                  <div className="grid grid-cols-2 gap-2 bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+                    <div>
+                      <span className="text-gray-500 block text-xs font-semibold uppercase tracking-wider">Type</span>
+                      <strong className="text-gray-800 text-sm">{(detail.certificate_type || "").toUpperCase()}</strong>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block text-xs font-semibold uppercase tracking-wider">Status</span>
+                      <StatusBadge status={detail.status} />
+                    </div>
+                    <div className="col-span-2 mt-2 pt-2 border-t border-gray-100">
+                      <span className="text-gray-500 block text-xs font-semibold uppercase tracking-wider">Applying Resident</span>
+                      <span className="text-gray-800 font-medium">{detail.resident_firstname} {detail.resident_lastname}</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-indigo-50/50 border border-indigo-100/50 p-4 rounded-xl space-y-2.5">
+                    <h3 className="text-xs font-bold text-indigo-800 uppercase tracking-widest mb-1.5">Vital Record Details</h3>
+                    {detail.certificate_type === 'death' && (
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                        <div className="col-span-2">
+                          <span className="text-gray-500 font-medium block">Deceased Full Name:</span>
+                          <strong className="text-gray-800 text-sm">{detail.child_name || "—"}</strong>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 font-medium block">Date of Death:</span>
+                          <span className="text-gray-800 font-semibold">{detail.death_date ? new Date(detail.death_date).toLocaleDateString() : "—"}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 font-medium block">Place of Death:</span>
+                          <span className="text-gray-800 font-semibold">{detail.death_place || "—"}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-gray-500 font-medium block">Cause of Death:</span>
+                          <span className="text-gray-800 font-semibold">{detail.cause_of_death || "—"}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {detail.certificate_type === 'birth' && (
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                        <div className="col-span-2">
+                          <span className="text-gray-500 font-medium block">Child's Full Name:</span>
+                          <strong className="text-gray-800 text-sm">{detail.child_name || "—"}</strong>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 font-medium block">Date of Birth:</span>
+                          <span className="text-gray-800 font-semibold">{detail.birth_date ? new Date(detail.birth_date).toLocaleDateString() : "—"}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 font-medium block">Place of Birth:</span>
+                          <span className="text-gray-800 font-semibold">{detail.birth_place || "—"}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 font-medium block">Mother's Full Name:</span>
+                          <span className="text-gray-800 font-semibold">{detail.mother_name || "—"}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 font-medium block">Father's Full Name:</span>
+                          <span className="text-gray-800 font-semibold">{detail.father_name || "—"}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {detail.certificate_type === 'marriage' && (
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                        <div>
+                          <span className="text-gray-500 font-medium block">Husband's Name:</span>
+                          <strong className="text-gray-800 text-sm">{detail.husband_name || "—"}</strong>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 font-medium block">Wife's Name:</span>
+                          <strong className="text-gray-800 text-sm">{detail.wife_name || "—"}</strong>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 font-medium block">Marriage Date:</span>
+                          <span className="text-gray-800 font-semibold">{detail.marriage_date ? new Date(detail.marriage_date).toLocaleDateString() : "—"}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 font-medium block">Marriage Place:</span>
+                          <span className="text-gray-800 font-semibold">{detail.marriage_place || "—"}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-gray-500 font-medium block">Witness Name:</span>
+                          <span className="text-gray-800 font-semibold">{detail.witness_name || "—"}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {(detail.certificate_type === 'residency' || detail.certificate_type === 'residency-id') && (
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                        <div className="col-span-2">
+                          <span className="text-gray-500 font-medium block">Full Name:</span>
+                          <strong className="text-gray-800 text-sm">{detail.child_name || "—"}</strong>
+                        </div>
+                        {detail.husband_name && (
+                          <div className="col-span-2">
+                            <span className="text-gray-500 font-medium block">Existing ID Number:</span>
+                            <span className="text-gray-800 font-mono font-semibold">{detail.husband_name}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="border-t pt-4 space-y-3">

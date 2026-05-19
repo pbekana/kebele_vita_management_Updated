@@ -177,13 +177,18 @@ const requestCertificate = async (req, res) => {
     deceasedName, deceased_name = deceasedName,
     deathDate, death_date = deathDate,
     causeOfDeath, cause_of_death = causeOfDeath,
+    deathPlace, death_place = deathPlace,
 
     // Marriage fields
     husbandName, husband_name = husbandName,
     wifeName, wife_name = wifeName,
     marriageDate, marriage_date = marriageDate,
     marriagePlace, marriage_place = marriagePlace,
-    witnessName, witness_name = witnessName
+    witnessName, witness_name = witnessName,
+
+    // Residency fields
+    fullName, full_name = fullName,
+    existingIdNumber, existing_id_number = existingIdNumber
   } = req.body;
 
   let connection;
@@ -204,7 +209,11 @@ const requestCertificate = async (req, res) => {
       });
     }
 
-    const final_child_name = certificate_type === 'death' ? (deceased_name || null) : (child_name || null);
+    const final_child_name = certificate_type === 'death' ? (deceased_name || null) :
+                             (certificate_type === 'residency-id' || certificate_type === 'residency') ? (full_name || null) :
+                             (child_name || null);
+
+    const final_husband_name = (certificate_type === 'residency-id' || certificate_type === 'residency') ? (existing_id_number || null) : (husband_name || null);
 
     let certificateId = null;
 
@@ -222,6 +231,7 @@ const requestCertificate = async (req, res) => {
           birth_date,
           death_date,
           cause_of_death,
+          death_place,
           husband_name,
           wife_name,
           marriage_date,
@@ -229,7 +239,7 @@ const requestCertificate = async (req, res) => {
           witness_name,
           status
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
         [
           resident.id,
           certificate_type,
@@ -240,7 +250,8 @@ const requestCertificate = async (req, res) => {
           birth_date || null,
           death_date || null,
           cause_of_death || null,
-          husband_name || null,
+          death_place || null,
+          final_husband_name,
           wife_name || null,
           marriage_date || null,
           marriage_place || null,
@@ -404,8 +415,7 @@ const downloadCertificate = async (req, res) => {
 const submitFeedback = async (req, res) => {
   if (handleValidationErrors(req, res)) return;
 
-  const { message } = req.body;
-  const description = message;
+  const { title, category, description } = req.body;
 
   try {
     const resident = await getResident(req.user.id);
@@ -420,11 +430,15 @@ const submitFeedback = async (req, res) => {
       `INSERT INTO report
       (
         resident_id,
+        title,
+        category,
         description
       )
-      VALUES (?, ?)`,
+      VALUES (?, ?, ?, ?)`,
       [
         resident.id,
+        title,
+        category,
         description,
       ]
     );
@@ -438,6 +452,32 @@ const submitFeedback = async (req, res) => {
       feedback_id: result.insertId,
     });
 
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
+const getMyReports = async (req, res) => {
+  try {
+    const resident = await getResident(req.user.id);
+
+    if (!resident) {
+      return res.status(404).json({
+        error: 'Resident profile not found',
+      });
+    }
+
+    const [reports] = await pool.query(
+      `SELECT * FROM report
+       WHERE resident_id = ?
+       ORDER BY created_at DESC`,
+      [resident.id]
+    );
+
+    return res.status(200).json({
+      count: reports.length,
+      reports,
+    });
   } catch (err) {
     return serverError(res, err);
   }
@@ -533,6 +573,7 @@ module.exports = {
   getMyCertificates,
   downloadCertificate,
   submitFeedback,
+  getMyReports,
   getProfile,
   listMyNotifications,
   markNotificationRead,

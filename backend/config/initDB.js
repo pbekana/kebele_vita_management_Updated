@@ -134,6 +134,7 @@ const initDB = async () => {
 
   death_date DATE,
   cause_of_death TEXT,
+  death_place VARCHAR(255) NULL,
 
  
   husband_name VARCHAR(255),

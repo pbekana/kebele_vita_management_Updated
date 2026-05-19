@@ -16,6 +16,7 @@ const create = async (data) => {
 
     death_date,
     cause_of_death,
+    death_place,
 
     husband_name,
     wife_name,
@@ -61,6 +62,7 @@ const create = async (data) => {
 
       death_date,
       cause_of_death,
+      death_place,
 
       husband_name,
       wife_name,
@@ -70,7 +72,7 @@ const create = async (data) => {
 
       status
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
     [
       resident_id,
       certificate_type,
@@ -83,6 +85,7 @@ const create = async (data) => {
 
       death_date || null,
       cause_of_death || null,
+      death_place || null,
 
       husband_name || null,
       wife_name || null,

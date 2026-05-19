@@ -133,3 +133,17 @@
 [2026-05-18T23:40:23.480Z] [INFO] Admin 1 assigned certificate 8 to staff 5
 [2026-05-18T23:42:01.167Z] [INFO] Staff 5 prepared certificate 8 for admin approval
 [2026-05-18T23:43:28.534Z] [INFO] Admin 1 approved certificate 8
+[2026-05-19T06:32:32.454Z] [INFO] Server running on port 5000
+[2026-05-19T06:55:55.453Z] [INFO] Server running on port 5000
+[2026-05-19T07:07:17.813Z] [INFO] Server running on port 5000
+[2026-05-19T07:09:32.307Z] [INFO] Feedback submitted by resident 9
+[2026-05-19T07:27:54.122Z] [INFO] Server running on port 5000
+[2026-05-19T08:39:52.040Z] [INFO] Admin 1 assigned task 9
+[2026-05-19T08:43:40.666Z] [INFO] Feedback submitted by resident 9
+[2026-05-19T08:44:56.865Z] [INFO] Admin 1 assigned task 10
+[2026-05-19T09:09:08.531Z] [INFO] Server running on port 5000
+[2026-05-19T09:13:25.821Z] [INFO] Server running on port 5000
+[2026-05-19T09:29:28.946Z] [INFO] Certificate request 9 created by resident 7
+[2026-05-19T09:30:09.703Z] [INFO] Admin 1 assigned certificate 9 to staff 4
+[2026-05-19T09:31:25.602Z] [INFO] Staff 4 prepared certificate 9 for admin approval
+[2026-05-19T09:32:02.039Z] [INFO] Admin 1 approved certificate 9

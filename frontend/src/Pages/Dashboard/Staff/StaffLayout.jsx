@@ -1,4 +1,6 @@
 import { Outlet, useLocation, Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import {
   Shield,
   Users,
@@ -11,8 +13,27 @@ import {
 const StaffLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [position, setPosition] = useState("");
 
-  const userRole = localStorage.getItem("role") || "staff";
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        const res = await axios.get("http://localhost:5000/api/staff/profile", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data.staff && res.data.staff.position) {
+          setPosition(res.data.staff.position);
+        }
+      } catch (err) {
+        console.error("Failed to fetch staff position:", err);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const userRole = position || localStorage.getItem("role") || "staff";
 
   const menuItems = [
     {

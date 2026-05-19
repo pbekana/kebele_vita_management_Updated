@@ -763,6 +763,65 @@ const rejectCertificate = async (req, res) => {
   }
 };
 
+const getReports = async (req, res) => {
+  try {
+    const [reports] = await pool.query(`
+      SELECT
+        rp.id,
+        rp.title,
+        rp.category,
+        rp.description,
+        rp.status,
+        rp.response,
+        rp.created_at,
+        CONCAT(r.firstname, ' ', r.lastname) AS reporter,
+        u.email AS resident_email
+      FROM report rp
+      INNER JOIN residents r ON rp.resident_id = r.id
+      INNER JOIN users u ON r.user_id = u.id
+      ORDER BY rp.created_at DESC
+    `);
+
+    return res.status(200).json({
+      count: reports.length,
+      reports,
+    });
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
+const updateReportStatus = async (req, res) => {
+  const reportId = Number(req.params.id);
+  const { status } = req.body;
+
+  if (!Number.isInteger(reportId)) {
+    return res.status(400).json({ error: 'Invalid report ID' });
+  }
+
+  const allowedStatuses = ['pending', 'in_review', 'completed', 'rejected'];
+  if (!allowedStatuses.includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+
+  try {
+    const [result] = await pool.query(
+      `UPDATE report
+       SET status = ?
+       WHERE id = ?`,
+      [status, reportId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    return res.status(200).json({ message: 'Report status updated successfully' });
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
 module.exports = {
   createUser,
   activateUser,
@@ -774,4 +833,6 @@ module.exports = {
   approveCertificate,
   getCertificates,
   rejectCertificate,
+  getReports,
+  updateReportStatus,
 };

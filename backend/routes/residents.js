@@ -9,6 +9,7 @@ const {
   getMyCertificates,
   downloadCertificate,
   submitFeedback,
+  getMyReports,
   getProfile,
   listMyNotifications,
   markNotificationRead,
@@ -60,12 +61,20 @@ router.get('/certificates/:id/download', downloadCertificate);
 // FEEDBACK
 // =======================
 
+router.get('/feedback', getMyReports);
+
 router.post(
   '/feedback',
   [
-    body('message')
+    body('title')
       .notEmpty()
-      .withMessage('Message is required'),
+      .withMessage('Title is required'),
+    body('category')
+      .notEmpty()
+      .withMessage('Category is required'),
+    body('description')
+      .notEmpty()
+      .withMessage('Description is required'),
   ],
   submitFeedback
 );

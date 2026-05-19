@@ -628,6 +628,7 @@ const ResidentDashboard = () => {
   const [reportForm, setReportForm] = useState({ title: '', category: '', description: '' });
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
+  const [myReports, setMyReports] = useState([]);
 
   const [certificates, setCertificates] = useState([]);
   const [userProfile, setUserProfile] = useState({
@@ -674,6 +675,10 @@ const ResidentDashboard = () => {
         // 2. Fetch Certificates
         const certRes = await axios.get("http://localhost:5000/api/residents/certificates", config);
         setCertificates(certRes.data.certificates || []);
+
+        // 3. Fetch Reports
+        const reportsRes = await axios.get("http://localhost:5000/api/residents/feedback", config);
+        setMyReports(reportsRes.data.reports || []);
       } catch (err) {
         console.error("Error loading resident dashboard data:", err);
         setCertFetchError(err.response?.data?.error || "Could not load your certificates.");
@@ -777,13 +782,13 @@ const ResidentDashboard = () => {
         const cId = cert.certificateId || cert.id;
         const cDate = cert.requested_at ? new Date(cert.requested_at).toLocaleDateString() : cert.requested_at;
         if (cType === 'birth') {
-          certHTML = `<div style="width:950px;padding:60px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:18px solid #1e40af;font-family:Arial,sans-serif;"><div style="text-align:center;border-bottom:3px solid #1e40af;padding-bottom:30px;margin-bottom:40px;"><div style="font-size:50px;margin-bottom:10px;">🏛️</div><h1 style="color:#1e40af;font-size:30px;margin:0;letter-spacing:2px;">HEREMATA MENTINA KEBELE</h1><p style="color:#475569;margin:8px 0;font-size:15px;">Official Vital Records Office • Jimma, Oromia, Ethiopia</p><h2 style="color:#1e40af;font-size:28px;margin:15px 0 0;">BIRTH CERTIFICATE</h2></div><div style="text-align:center;margin:50px 0;"><p style="font-size:18px;color:#475569;">This is to officially certify that</p><div style="display:inline-block;border-bottom:2px solid #1e40af;padding:10px 40px;margin:20px 0;"><h3 style="font-size:38px;color:#1e40af;margin:0;font-weight:bold;">${user.name}</h3></div><p style="font-size:18px;color:#475569;">was born in the Heremata Mentina Kebele jurisdiction</p></div><div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:60px;"><div style="font-size:16px;line-height:2;"><p style="margin:0;"><strong>Certificate ID:</strong> <span style="color:#1e40af;">${cId}</span></p><p style="margin:0;"><strong>Date of Issue:</strong> ${cDate}</p><p style="margin:0;"><strong>Kebele:</strong> ${user.kebele}</p><p style="margin:0;"><strong>Status:</strong> <span style="color:#16a34a;font-weight:bold;">OFFICIALLY ISSUED</span></p></div><div style="text-align:center;"><div style="width:160px;height:160px;border:5px solid #1e40af;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;background:#e0f2fe;"><span style="font-size:70px;">👶</span></div><p style="font-size:13px;color:#475569;margin-top:10px;">Official Seal</p></div></div><div style="text-align:center;margin-top:40px;border-top:1px solid #bfdbfe;padding-top:20px;"><p style="color:#64748b;font-size:13px;">This document is issued by the Kebele Administration Office and is legally valid.</p></div></div>`;
+          certHTML = `<div style="width:950px;padding:60px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:18px solid #1e40af;font-family:Arial,sans-serif;"><div style="text-align:center;border-bottom:3px solid #1e40af;padding-bottom:30px;margin-bottom:40px;"><div style="font-size:50px;margin-bottom:10px;">🏛️</div><h1 style="color:#1e40af;font-size:30px;margin:0;letter-spacing:2px;">HEREMATA MENTINA KEBELE</h1><p style="color:#475569;margin:8px 0;font-size:15px;">Official Vital Records Office • Jimma, Oromia, Ethiopia</p><h2 style="color:#1e40af;font-size:28px;margin:15px 0 0;">BIRTH CERTIFICATE</h2></div><div style="text-align:center;margin:30px 0;"><p style="font-size:18px;color:#475569;">This is to officially certify that</p><div style="display:inline-block;border-bottom:2px solid #1e40af;padding:10px 40px;margin:15px 0;"><h3 style="font-size:36px;color:#1e40af;margin:0;font-weight:bold;">${cert.child_name || '—'}</h3></div><div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:left;max-width:600px;margin-left:auto;margin-right:auto;font-size:16px;"><p><strong>Date of Birth:</strong> ${cert.birth_date ? new Date(cert.birth_date).toLocaleDateString() : 'N/A'}</p><p><strong>Place of Birth:</strong> ${cert.birth_place || 'N/A'}</p><p><strong>Father's Name:</strong> ${cert.father_name || 'N/A'}</p><p><strong>Mother's Name:</strong> ${cert.mother_name || 'N/A'}</p></div></div><div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:40px;"><div style="font-size:16px;line-height:2;"><p style="margin:0;"><strong>Certificate ID:</strong> <span style="color:#1e40af;">${cId}</span></p><p style="margin:0;"><strong>Date of Issue:</strong> ${cDate}</p><p style="margin:0;"><strong>Kebele:</strong> ${user.kebele}</p><p style="margin:0;"><strong>Status:</strong> <span style="color:#16a34a;font-weight:bold;">OFFICIALLY ISSUED</span></p></div><div style="text-align:center;"><div style="width:140px;height:140px;border:5px solid #1e40af;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;background:#e0f2fe;"><span style="font-size:60px;">👶</span></div><p style="font-size:13px;color:#475569;margin-top:10px;">Official Seal</p></div></div><div style="text-align:center;margin-top:40px;border-top:1px solid #bfdbfe;padding-top:20px;"><p style="color:#64748b;font-size:13px;">This document is issued by the Kebele Administration Office and is legally valid.</p></div></div>`;
         } else if (cType === 'marriage') {
-          certHTML = `<div style="width:950px;padding:60px;background:linear-gradient(135deg,#fff7ed,#fef3c7);border:18px double #92400e;font-family:Georgia,serif;"><div style="text-align:center;margin-bottom:40px;"><div style="font-size:50px;margin-bottom:10px;">🏛️</div><h1 style="color:#92400e;font-size:30px;margin:0;letter-spacing:2px;">HEREMATA MENTINA KEBELE</h1><p style="color:#78716c;font-size:15px;margin:8px 0;">Official Marriage Registry • Jimma, Oromia, Ethiopia</p><h2 style="color:#92400e;font-size:32px;margin:20px 0 0;">✦ MARRIAGE CERTIFICATE ✦</h2></div><div style="text-align:center;margin:50px 0;"><p style="font-size:18px;color:#78716c;font-style:italic;">This is to solemnly certify that</p><h3 style="font-size:38px;color:#92400e;margin:20px 0;border-bottom:2px solid #f59e0b;display:inline-block;padding:10px 50px;">${user.name}</h3><p style="font-size:18px;color:#78716c;font-style:italic;">entered into the union of marriage in accordance with the laws of Ethiopia</p></div><div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:60px;"><div style="font-size:16px;line-height:2;font-family:Arial,sans-serif;"><p style="margin:0;"><strong>Certificate ID:</strong> ${cId}</p><p style="margin:0;"><strong>Date of Issue:</strong> ${cDate}</p><p style="margin:0;"><strong>Kebele:</strong> ${user.kebele}</p><p style="margin:0;"><strong>Status:</strong> <span style="color:#16a34a;font-weight:bold;">OFFICIALLY ISSUED</span></p></div><div style="text-align:center;"><div style="width:160px;height:160px;border:5px solid #92400e;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fef3c7;"><span style="font-size:70px;">💍</span></div><p style="font-size:13px;color:#78716c;margin-top:10px;">Official Seal</p></div></div></div>`;
+          certHTML = `<div style="width:950px;padding:60px;background:linear-gradient(135deg,#fff7ed,#fef3c7);border:18px double #92400e;font-family:Georgia,serif;"><div style="text-align:center;margin-bottom:30px;"><div style="font-size:50px;margin-bottom:10px;">🏛️</div><h1 style="color:#92400e;font-size:30px;margin:0;letter-spacing:2px;">HEREMATA MENTINA KEBELE</h1><p style="color:#78716c;font-size:15px;margin:8px 0;">Official Marriage Registry • Jimma, Oromia, Ethiopia</p><h2 style="color:#92400e;font-size:32px;margin:20px 0 0;">✦ MARRIAGE CERTIFICATE ✦</h2></div><div style="text-align:center;margin:30px 0;"><p style="font-size:18px;color:#78716c;font-style:italic;">This is to solemnly certify the holy union between</p><h3 style="font-size:32px;color:#92400e;margin:15px 0;border-bottom:2px solid #f59e0b;display:inline-block;padding:10px 50px;">${cert.husband_name || '—'} & ${cert.wife_name || '—'}</h3><div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:left;max-width:600px;margin-left:auto;margin-right:auto;font-size:16px;font-family:Arial,sans-serif;"><p><strong>Marriage Date:</strong> ${cert.marriage_date ? new Date(cert.marriage_date).toLocaleDateString() : 'N/A'}</p><p><strong>Marriage Place:</strong> ${cert.marriage_place || 'N/A'}</p><p style="grid-column: span 2;"><strong>Witness Name:</strong> ${cert.witness_name || 'N/A'}</p></div></div><div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:40px;"><div style="font-size:16px;line-height:2;font-family:Arial,sans-serif;"><p style="margin:0;"><strong>Certificate ID:</strong> ${cId}</p><p style="margin:0;"><strong>Date of Issue:</strong> ${cDate}</p><p style="margin:0;"><strong>Kebele:</strong> ${user.kebele}</p><p style="margin:0;"><strong>Status:</strong> <span style="color:#16a34a;font-weight:bold;">OFFICIALLY ISSUED</span></p></div><div style="text-align:center;"><div style="width:140px;height:140px;border:5px solid #92400e;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fef3c7;"><span style="font-size:60px;">💍</span></div><p style="font-size:13px;color:#78716c;margin-top:10px;">Official Seal</p></div></div></div>`;
         } else if (cType === 'death') {
-          certHTML = `<div style="width:950px;padding:60px;background:#f8fafc;border:18px solid #334155;font-family:Arial,sans-serif;"><div style="text-align:center;border-bottom:2px solid #334155;padding-bottom:30px;margin-bottom:40px;"><div style="font-size:50px;margin-bottom:10px;">🏛️</div><h1 style="color:#334155;font-size:30px;margin:0;">HEREMATA MENTINA KEBELE</h1><p style="color:#64748b;font-size:15px;margin:8px 0;">Official Vital Records Office • Jimma, Oromia, Ethiopia</p><h2 style="color:#334155;font-size:28px;margin:15px 0 0;">DEATH CERTIFICATE</h2></div><div style="text-align:center;margin:50px 0;"><p style="font-size:18px;color:#64748b;">This is to officially certify the death of</p><div style="border:2px solid #334155;display:inline-block;padding:15px 50px;margin:20px 0;"><h3 style="font-size:38px;color:#334155;margin:0;">${user.name}</h3></div></div><div style="display:flex;justify-content:space-between;margin-top:60px;"><div style="font-size:16px;line-height:2;"><p><strong>Certificate ID:</strong> ${cId}</p><p><strong>Date of Issue:</strong> ${cDate}</p><p><strong>Kebele:</strong> ${user.kebele}</p><p><strong>Status:</strong> <span style="color:#16a34a;">OFFICIALLY ISSUED</span></p></div><div style="text-align:center;"><div style="width:160px;height:160px;border:5px solid #334155;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#f1f5f9;"><span style="font-size:70px;">🏛️</span></div><p style="font-size:13px;color:#64748b;margin-top:10px;">Official Seal</p></div></div></div>`;
+          certHTML = `<div style="width:950px;padding:60px;background:#f8fafc;border:18px solid #334155;font-family:Arial,sans-serif;"><div style="text-align:center;border-bottom:2px solid #334155;padding-bottom:30px;margin-bottom:40px;"><div style="font-size:50px;margin-bottom:10px;">🏛️</div><h1 style="color:#334155;font-size:30px;margin:0;">HEREMATA MENTINA KEBELE</h1><p style="color:#64748b;font-size:15px;margin:8px 0;">Official Vital Records Office • Jimma, Oromia, Ethiopia</p><h2 style="color:#334155;font-size:28px;margin:15px 0 0;">DEATH CERTIFICATE</h2></div><div style="text-align:center;margin:30px 0;"><p style="font-size:18px;color:#64748b;">This is to officially certify the death of</p><div style="border:2px solid #334155;display:inline-block;padding:15px 50px;margin:15px 0;"><h3 style="font-size:36px;color:#334155;margin:0;">${cert.child_name || '—'}</h3></div><div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:left;max-width:600px;margin-left:auto;margin-right:auto;font-size:16px;"><p><strong>Date of Death:</strong> ${cert.death_date ? new Date(cert.death_date).toLocaleDateString() : 'N/A'}</p><p><strong>Place of Death:</strong> ${cert.death_place || 'N/A'}</p><p style="grid-column: span 2;"><strong>Cause of Death:</strong> ${cert.cause_of_death || 'N/A'}</p></div></div><div style="display:flex;justify-content:space-between;margin-top:40px;"><div style="font-size:16px;line-height:2;"><p><strong>Certificate ID:</strong> ${cId}</p><p><strong>Date of Issue:</strong> ${cDate}</p><p><strong>Kebele:</strong> ${user.kebele}</p><p><strong>Status:</strong> <span style="color:#16a34a;">OFFICIALLY ISSUED</span></p></div><div style="text-align:center;"><div style="width:140px;height:140px;border:5px solid #334155;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#f1f5f9;"><span style="font-size:60px;">🏛️</span></div><p style="font-size:13px;color:#64748b;margin-top:10px;">Official Seal</p></div></div></div>`;
         } else {
-          certHTML = `<div style="width:950px;padding:60px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:18px solid #166534;font-family:Arial,sans-serif;"><div style="text-align:center;border-bottom:3px solid #166534;padding-bottom:30px;margin-bottom:40px;"><div style="font-size:50px;margin-bottom:10px;">🏛️</div><h1 style="color:#166534;font-size:30px;margin:0;">HEREMATA MENTINA KEBELE</h1><p style="color:#4b5563;font-size:15px;margin:8px 0;">Official Records Office • Jimma, Oromia, Ethiopia</p><h2 style="color:#166534;font-size:28px;margin:15px 0 0;">${cType.toUpperCase()} CERTIFICATE</h2></div><div style="text-align:center;margin:50px 0;"><p style="font-size:18px;color:#4b5563;">This is to certify that</p><h3 style="font-size:38px;color:#166534;margin:20px 0;">${user.name}</h3></div><div style="display:flex;justify-content:space-between;margin-top:60px;font-size:16px;line-height:2;"><div><p><strong>Certificate ID:</strong> ${cId}</p><p><strong>Date of Issue:</strong> ${cDate}</p><p><strong>Kebele:</strong> ${user.kebele}</p></div><div style="width:160px;height:160px;border:5px solid #166534;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#dcfce7;"><span style="font-size:70px;">🪪</span></div></div></div>`;
+          certHTML = `<div style="width:950px;padding:60px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:18px solid #166534;font-family:Arial,sans-serif;"><div style="text-align:center;border-bottom:3px solid #166534;padding-bottom:30px;margin-bottom:40px;"><div style="font-size:50px;margin-bottom:10px;">🏛️</div><h1 style="color:#166534;font-size:30px;margin:0;">HEREMATA MENTINA KEBELE</h1><p style="color:#4b5563;font-size:15px;margin:8px 0;">Official Records Office • Jimma, Oromia, Ethiopia</p><h2 style="color:#166534;font-size:28px;margin:15px 0 0;">${cType.toUpperCase()} CERTIFICATE</h2></div><div style="text-align:center;margin:50px 0;"><p style="font-size:18px;color:#4b5563;">This is to certify that</p><h3 style="font-size:38px;color:#166534;margin:20px 0;">${cert.child_name || user.name}</h3></div><div style="display:flex;justify-content:space-between;margin-top:60px;font-size:16px;line-height:2;"><div><p><strong>Certificate ID:</strong> ${cId}</p><p><strong>Date of Issue:</strong> ${cDate}</p><p><strong>Kebele:</strong> ${user.kebele}</p></div><div style="width:160px;height:160px;border:5px solid #166534;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#dcfce7;"><span style="font-size:70px;">🪪</span></div></div></div>`;
         }
   
         const tempDiv = document.createElement('div');
@@ -807,9 +812,20 @@ const ResidentDashboard = () => {
   const handleReportSubmit = async (e) => {
     e.preventDefault();
     setReportLoading(true);
-    await new Promise(r => setTimeout(r, 1500));
-    setReportSubmitted(true);
-    setReportLoading(false);
+    try {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      await axios.post('http://localhost:5000/api/residents/feedback', reportForm, config);
+      setReportSubmitted(true);
+      
+      const reportsRes = await axios.get("http://localhost:5000/api/residents/feedback", config);
+      setMyReports(reportsRes.data.reports || []);
+    } catch (err) {
+      console.error("Failed to submit report:", err);
+      alert(err.response?.data?.error || "Failed to submit report. Please try again.");
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   return (
@@ -958,6 +974,18 @@ const ResidentDashboard = () => {
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                             <div>
                               <div className="kd-cert-type">{(cert.certificate_type || cert.type || "UNKNOWN").toUpperCase()} certificate</div>
+                              {cert.certificate_type === 'death' && (
+                                <div style={{ fontSize: 13, color: '#475569', fontWeight: 500, marginTop: 2 }}>Deceased: <span style={{ fontWeight: 600, color: '#1e293b' }}>{cert.child_name || "—"}</span></div>
+                              )}
+                              {cert.certificate_type === 'birth' && (
+                                <div style={{ fontSize: 13, color: '#475569', fontWeight: 500, marginTop: 2 }}>Child: <span style={{ fontWeight: 600, color: '#1e293b' }}>{cert.child_name || "—"}</span></div>
+                              )}
+                              {cert.certificate_type === 'marriage' && (
+                                <div style={{ fontSize: 13, color: '#475569', fontWeight: 500, marginTop: 2 }}>Husband: <span style={{ fontWeight: 600, color: '#1e293b' }}>{cert.husband_name || "—"}</span> · Wife: <span style={{ fontWeight: 600, color: '#1e293b' }}>{cert.wife_name || "—"}</span></div>
+                              )}
+                              {(cert.certificate_type === 'residency' || cert.certificate_type === 'residency-id') && (
+                                <div style={{ fontSize: 13, color: '#475569', fontWeight: 500, marginTop: 2 }}>Applicant: <span style={{ fontWeight: 600, color: '#1e293b' }}>{cert.child_name || "—"}</span></div>
+                              )}
                               <div className="kd-cert-date">Requested: {cert.requested_at ? new Date(cert.requested_at).toLocaleString() : "—"}</div>
                               {(cert.status === 'approved' || cert.status === 'issued') && cert.approved_at && (
                                 <div className="kd-cert-date" style={{ color: '#15803d' }}>
@@ -1028,86 +1056,146 @@ const ResidentDashboard = () => {
                 </div>
               </div>
 
-              {reportSubmitted ? (
-                <div className="kd-success-box">
-                  <div className="kd-success-icon">✅</div>
-                  <div className="kd-success-title">Report Submitted Successfully!</div>
-                  <div className="kd-success-desc">
-                    Your issue has been reported. The Kebele office will review it and respond shortly.
-                  </div>
-                  <button
-                    className="kd-success-retry"
-                    onClick={() => {
-                      setReportSubmitted(false);
-                      setReportForm({ title: '', category: '', description: '' });
-                    }}
-                  >
-                    Submit Another Report
-                  </button>
-                </div>
-              ) : (
-                <div className="kd-form-card">
-                  <div className="kd-form-title">New Issue Report</div>
-                  <div className="kd-form-sub">All fields are required. We aim to respond within 2–3 business days.</div>
-
-                  <form onSubmit={handleReportSubmit}>
-                    <div className="kd-field">
-                      <label className="kd-label">Issue Title</label>
-                      <input
-                        className="kd-input"
-                        type="text"
-                        placeholder="Brief description of the issue"
-                        value={reportForm.title}
-                        onChange={e => setReportForm({ ...reportForm, title: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="kd-field">
-                      <label className="kd-label">Category</label>
-                      <select
-                        className="kd-select"
-                        value={reportForm.category}
-                        onChange={e => setReportForm({ ...reportForm, category: e.target.value })}
-                        required
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24, alignItems: 'start' }}>
+                
+                {/* Submit Panel */}
+                <div>
+                  {reportSubmitted ? (
+                    <div className="kd-success-box" style={{ margin: 0 }}>
+                      <div className="kd-success-icon">✅</div>
+                      <div className="kd-success-title">Report Submitted Successfully!</div>
+                      <div className="kd-success-desc">
+                        Your issue has been reported. The Kebele office will review it and respond shortly.
+                      </div>
+                      <button
+                        className="kd-success-retry"
+                        onClick={() => {
+                          setReportSubmitted(false);
+                          setReportForm({ title: '', category: '', description: '' });
+                        }}
                       >
-                        <option value="">Select a category</option>
-                        <option value="waste">🗑 Waste &amp; Garbage</option>
-                        <option value="electricity">⚡ Electricity Problem</option>
-                        <option value="water">💧 Water Supply Issue</option>
-                        <option value="road">🛣 Road &amp; Infrastructure</option>
-                        <option value="sanitation">🧹 Sanitation &amp; Hygiene</option>
-                        <option value="security">🔒 Security Concern</option>
-                        <option value="certificate">📄 Certificate Issue</option>
-                        <option value="identity">🪪 Identity / ID Problem</option>
-                        <option value="records">📋 Records Error</option>
-                        <option value="service">🏛 Service Complaint</option>
-                        <option value="other">📌 Other</option>
-                      </select>
+                        Submit Another Report
+                      </button>
                     </div>
+                  ) : (
+                    <div className="kd-form-card" style={{ margin: 0 }}>
+                      <div className="kd-form-title">New Issue Report</div>
+                      <div className="kd-form-sub">All fields are required. We aim to respond within 2–3 business days.</div>
 
-                    <div className="kd-field">
-                      <label className="kd-label">Description</label>
-                      <textarea
-                        className="kd-textarea"
-                        placeholder="Describe the issue in detail — location, time, what happened..."
-                        value={reportForm.description}
-                        onChange={e => setReportForm({ ...reportForm, description: e.target.value })}
-                        required
-                      />
+                      <form onSubmit={handleReportSubmit}>
+                        <div className="kd-field">
+                          <label className="kd-label">Issue Title</label>
+                          <input
+                            className="kd-input"
+                            type="text"
+                            placeholder="Brief description of the issue"
+                            value={reportForm.title}
+                            onChange={e => setReportForm({ ...reportForm, title: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="kd-field">
+                          <label className="kd-label">Category</label>
+                          <select
+                            className="kd-select"
+                            value={reportForm.category}
+                            onChange={e => setReportForm({ ...reportForm, category: e.target.value })}
+                            required
+                          >
+                            <option value="">Select a category</option>
+                            <option value="waste">🗑 Waste &amp; Garbage</option>
+                            <option value="electricity">⚡ Electricity Problem</option>
+                            <option value="water">💧 Water Supply Issue</option>
+                            <option value="road">🛣 Road &amp; Infrastructure</option>
+                            <option value="sanitation">🧹 Sanitation &amp; Hygiene</option>
+                            <option value="security">🔒 Security Concern</option>
+                            <option value="certificate">📄 Certificate Issue</option>
+                            <option value="identity">🪪 Identity / ID Problem</option>
+                            <option value="records">📋 Records Error</option>
+                            <option value="service">🏛 Service Complaint</option>
+                            <option value="other">📌 Other</option>
+                          </select>
+                        </div>
+
+                        <div className="kd-field">
+                          <label className="kd-label">Description</label>
+                          <textarea
+                            className="kd-textarea"
+                            placeholder="Describe the issue in detail — location, time, what happened..."
+                            value={reportForm.description}
+                            onChange={e => setReportForm({ ...reportForm, description: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="kd-submit-btn"
+                          disabled={reportLoading}
+                        >
+                          <Send />
+                          {reportLoading ? 'Submitting...' : 'Submit Report'}
+                        </button>
+                      </form>
                     </div>
-
-                    <button
-                      type="submit"
-                      className="kd-submit-btn"
-                      disabled={reportLoading}
-                    >
-                      <Send />
-                      {reportLoading ? 'Submitting...' : 'Submit Report'}
-                    </button>
-                  </form>
+                  )}
                 </div>
-              )}
+
+                {/* My Past Reports Panel */}
+                <div className="kd-form-card" style={{ margin: 0, height: 'fit-content', maxHeight: '720px', overflowY: 'auto' }}>
+                  <div className="kd-form-title">My Submitted Reports</div>
+                  <div className="kd-form-sub">Track status and view response messages from Kebele officers.</div>
+
+                  <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {myReports.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '32px 0', color: '#64748b', fontSize: 14 }}>
+                        You haven't submitted any reports yet.
+                      </div>
+                    ) : (
+                      myReports.map((report) => (
+                        <div key={report.id} style={{ border: '1px solid #e2e8f0', borderRadius: 16, padding: 16, backgroundColor: '#f8fafc' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#6366f1' }}>
+                              {report.category}
+                            </span>
+                            <span style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              padding: '4px 10px',
+                              borderRadius: 9999,
+                              backgroundColor: report.status === 'completed' ? '#d1fae5' : report.status === 'in_review' ? '#dbeafe' : '#fef3c7',
+                              color: report.status === 'completed' ? '#065f46' : report.status === 'in_review' ? '#1e40af' : '#92400e'
+                            }}>
+                              {report.status === 'completed' ? 'Resolved' : report.status === 'in_review' ? 'In Review' : 'Pending'}
+                            </span>
+                          </div>
+                          <h4 style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', margin: '0 0 6px 0' }}>{report.title}</h4>
+                          <p style={{ fontSize: 13, color: '#475569', margin: '0 0 12px 0', lineHeight: 1.4 }}>{report.description}</p>
+                          
+                          {report.response ? (
+                            <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: 10 }}>
+                              <span style={{ fontSize: 11, fontWeight: 800, color: '#0f766e', display: 'block', marginBottom: 4 }}>
+                                Officer Response:
+                              </span>
+                              <p style={{ fontSize: 12, color: '#0d9488', margin: 0, fontStyle: 'italic', fontWeight: 600, lineHeight: 1.4 }}>
+                                "{report.response}"
+                              </p>
+                            </div>
+                          ) : (
+                            <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: 10 }}>
+                              <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, fontStyle: 'italic' }}>
+                                Pending review from Reports Officer
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+              </div>
             </>
           )}
 
