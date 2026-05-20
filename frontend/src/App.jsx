@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { NotificationProvider } from './components/NotificationProvider';
 
 // Main Pages
 import LandingPage from './Pages/Landing/LandingPage';
@@ -28,8 +29,9 @@ import ApplyCertificate from './Pages/Apply/ApplyCertificate';
 
 function App() {
   return (
-    <Router>
-      <Routes>
+    <NotificationProvider>
+      <Router>
+        <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/register" element={<RegisterForm />} />
         <Route path="/login" element={<LoginForm />} />
@@ -56,8 +58,9 @@ function App() {
 
         {/* Apply Certificates */}
         <Route path="/apply/:type" element={<ApplyCertificate />} />
-      </Routes>
-    </Router>
+        </Routes>
+      </Router>
+    </NotificationProvider>
   );
 }
 

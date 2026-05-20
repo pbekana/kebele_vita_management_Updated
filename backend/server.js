@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -12,8 +13,7 @@ const app = express();
 // ── Security & Parsing Middleware ────────────────────────
 app.use(helmet());
 app.use(cors());
-app.use(express.json({ limit: '20mb' }));
-
+app.use(express.json({ limit: '20mb' }));app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // ── Global rate limiter ──────────────────────────────────
 app.use('/api/', apiLimiter);
 

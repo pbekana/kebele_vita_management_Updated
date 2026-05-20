@@ -161,3 +161,26 @@
 [2026-05-19T16:37:12.905Z] [INFO] Staff 2 prepared certificate 5 for admin approval
 [2026-05-19T16:40:04.507Z] [INFO] Admin 1 approved certificate 5
 [2026-05-19T17:48:07.113Z] [INFO] Server running on port 5000
+[2026-05-20T07:43:46.801Z] [INFO] Server running on port 5000
+[2026-05-20T07:56:41.709Z] [INFO] Certificate request 10 created by resident 9
+[2026-05-20T07:57:42.523Z] [INFO] Admin 1 assigned certificate 10 to staff 3
+[2026-05-20T07:59:04.551Z] [INFO] Staff 3 prepared certificate 10 for admin approval
+[2026-05-20T08:08:19.715Z] [INFO] Admin 1 approved certificate 10
+[2026-05-20T08:41:24.362Z] [INFO] Migration: added certificates.child_photo_path
+[2026-05-20T08:41:24.744Z] [INFO] Migration: added certificates.deceased_photo_path
+[2026-05-20T08:41:24.830Z] [INFO] Migration: added certificates.husband_photo_path
+[2026-05-20T08:41:24.953Z] [INFO] Migration: added certificates.wife_photo_path
+[2026-05-20T08:41:25.069Z] [INFO] Migration: added certificates.husband_birth_date
+[2026-05-20T08:41:25.187Z] [INFO] Migration: added certificates.husband_birth_place
+[2026-05-20T08:41:25.287Z] [INFO] Migration: added certificates.wife_birth_date
+[2026-05-20T08:41:25.387Z] [INFO] Migration: added certificates.wife_birth_place
+[2026-05-20T08:41:25.462Z] [INFO] Server running on port 5000
+[2026-05-20T09:13:56.850Z] [ERROR] Error: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '?, 'pending')' at line 28
+[2026-05-20T09:20:32.828Z] [INFO] Server running on port 5000
+[2026-05-20T09:20:39.518Z] [INFO] Certificate request 11 created by resident 9
+[2026-05-20T09:22:17.214Z] [INFO] Admin 1 assigned certificate 11 to staff 2
+[2026-05-20T09:23:20.295Z] [INFO] Staff 2 prepared certificate 11 for admin approval
+[2026-05-20T09:23:54.186Z] [INFO] Admin 1 approved certificate 11
+[2026-05-20T10:08:45.898Z] [INFO] Migration: added certificates.hospital_evidence_path
+[2026-05-20T10:08:46.090Z] [INFO] Migration: added certificates.deceased_resident_id
+[2026-05-20T10:08:46.183Z] [INFO] Server running on port 5000

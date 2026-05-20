@@ -432,12 +432,16 @@ const approveCertificate = async (req, res) => {
 
   try {
     const [certificates] = await pool.query(
-      `SELECT 
-        id,
-        status
-      FROM certificates
-      WHERE id = ?
-      LIMIT 1`,
+      `SELECT
+         c.*,
+         r.id AS requester_resident_id,
+         r.firstname AS requester_firstname,
+         r.lastname AS requester_lastname,
+         r.marital_status AS requester_marital_status
+       FROM certificates c
+       INNER JOIN residents r ON c.resident_id = r.id
+       WHERE c.id = ?
+       LIMIT 1`,
       [certificateId]
     );
 
@@ -455,16 +459,111 @@ const approveCertificate = async (req, res) => {
       });
     }
 
-    await pool.query(
-      `UPDATE certificates
-       SET 
-         status = 'approved',
-         approved_by = ?,
-         approved_at = NOW(),
-         rejection_reason = NULL
-       WHERE id = ?`,
-      [req.user.id, certificateId]
-    );
+    const connection = await pool.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      if (certificate.certificate_type === 'marriage') {
+        const requesterName = `${certificate.requester_firstname} ${certificate.requester_lastname}`.trim().toLowerCase();
+        const husbandName = (certificate.husband_name || '').trim();
+        const wifeName = (certificate.wife_name || '').trim();
+
+        const spouseName = [husbandName, wifeName].find((name) => {
+          const lowered = name.toLowerCase();
+          return lowered !== requesterName && name.length > 0;
+        }) || '';
+
+        if (certificate.requester_marital_status === 'married') {
+          await connection.rollback();
+          return res.status(400).json({
+            error: 'This marriage certificate cannot be approved because the requesting resident is already married.',
+          });
+        }
+
+        if (spouseName) {
+          const parts = spouseName.split(/\s+/);
+          const spouseFirst = parts[0] || '';
+          const spouseLast = parts.slice(1).join(' ') || '';
+          const [spouseRows] = await connection.query(
+            `SELECT id, marital_status FROM residents
+             WHERE firstname = ? AND lastname = ?
+             LIMIT 1`,
+            [spouseFirst, spouseLast]
+          );
+
+          if (spouseRows.length > 0) {
+            const spouse = spouseRows[0];
+            if (spouse.marital_status === 'married') {
+              await connection.rollback();
+              return res.status(400).json({
+                error: 'This marriage certificate cannot be approved because the named spouse is already married.',
+              });
+            }
+
+            await connection.query(
+              `UPDATE residents SET marital_status = 'married', spouse_id = ? WHERE id = ?`,
+              [spouse.id, certificate.requester_resident_id]
+            );
+            await connection.query(
+              `UPDATE residents SET marital_status = 'married', spouse_id = ? WHERE id = ?`,
+              [certificate.requester_resident_id, spouse.id]
+            );
+          } else {
+            await connection.query(
+              `UPDATE residents SET marital_status = 'married' WHERE id = ?`,
+              [certificate.requester_resident_id]
+            );
+          }
+        } else {
+          await connection.query(
+            `UPDATE residents SET marital_status = 'married' WHERE id = ?`,
+            [certificate.requester_resident_id]
+          );
+        }
+      }
+
+      if (certificate.certificate_type === 'birth') {
+        const childFirstname = certificate.child_name || '';
+        const childLastname = certificate.requester_firstname || '';
+        if (childFirstname && childLastname) {
+          const [existingChild] = await connection.query(
+            `SELECT id FROM children WHERE firstname = ? AND lastname = ? LIMIT 1`,
+            [childFirstname, childLastname]
+          );
+
+          if (existingChild.length > 0) {
+            await connection.query(
+              `UPDATE children
+               SET father_id = ?, birth_date = ?, birthplace = ?
+               WHERE id = ?`,
+              [certificate.requester_resident_id, certificate.birth_date || null, certificate.birth_place || null, existingChild[0].id]
+            );
+          } else {
+            await connection.query(
+              `INSERT INTO children
+               (father_id, mother_id, firstname, lastname, birth_date, birthplace, is_alive)
+               VALUES (?, NULL, ?, ?, ?, ?, TRUE)`,
+              [certificate.requester_resident_id, childFirstname, childLastname, certificate.birth_date || null, certificate.birth_place || null]
+            );
+          }
+        }
+      }
+
+      await connection.query(
+        `UPDATE certificates
+         SET status = 'approved', approved_by = ?, approved_at = NOW(), rejection_reason = NULL
+         WHERE id = ?`,
+        [req.user.id, certificateId]
+      );
+
+      await connection.commit();
+    } catch (err) {
+      if (connection) await connection.rollback();
+      throw err;
+    } finally {
+      if (connection) connection.release();
+    }
 
     await logCertificateAudit(certificateId, req.user.id, 'admin_approve', null);
 

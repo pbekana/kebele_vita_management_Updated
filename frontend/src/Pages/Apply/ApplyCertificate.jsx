@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Upload, X } from 'lucide-react';
 import axios from 'axios';
+import { useNotification } from '../../components/NotificationProvider';
 
 const ApplyCertificate = () => {
   const { type } = useParams();
@@ -11,13 +12,19 @@ const ApplyCertificate = () => {
   const [formData, setFormData] = useState({
     childName: "", motherName: "", fatherName: "", fullName: "",
     birthDate: "", birthPlace: "",
+    childPhoto: null,
 
     husbandName: "", wifeName: "", marriageDate: "", marriagePlace: "", witnessName: "",
+    husbandBirthDate: "", husbandBirthPlace: "", wifeBirthDate: "", wifeBirthPlace: "",
+    husbandPhoto: null,
+    wifePhoto: null,
 
     deceasedName: "", deathDate: "", causeOfDeath: "", deathPlace: "",
+    deceasedPhoto: null,
 
     // Residency ID
     existingIdNumber: "",
+    applicantPhoto: null,
 
     phone: "",
     additionalInfo: "",
@@ -25,6 +32,7 @@ const ApplyCertificate = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const { notifySuccess, notifyError } = useNotification();
 
   const configs = {
     birth: { title: "Birth Certificate", icon: "👶" },
@@ -41,7 +49,15 @@ const ApplyCertificate = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = (name) => (e) => {
+    const file = e.target.files?.[0] || null;
+    setFormData(prev => ({
+      ...prev,
+      [name]: file,
+    }));
+  };
+
+  const addDocumentFiles = (e) => {
     const files = Array.from(e.target.files);
     const newFiles = files.map(file => ({
       name: file.name,
@@ -67,23 +83,39 @@ const ApplyCertificate = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const payload = new FormData();
+      payload.append('certificate_type', type);
+
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value === null || value === undefined) return;
+        if (value instanceof File) {
+          payload.append(key, value);
+          return;
+        }
+        if (Array.isArray(value)) {
+          value.forEach((item, index) => {
+            payload.append(`documents[${index}]`, item.file);
+          });
+          return;
+        }
+        payload.append(key, value);
+      });
+
       await axios.post(
         "http://localhost:5000/api/residents/certificates/request",
-        {
-          certificate_type: type,
-          ...formData,
-        },
+        payload,
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
           },
         }
       );
-      alert(`✅ ${config.title} Application Submitted Successfully!`);
+      notifySuccess(`${config.title} application submitted successfully.`);
       navigate('/dashboard');
     } catch (err) {
       console.error(err);
-      alert(`❌ Failed to submit application: ${err.response?.data?.error || err.message}`);
+      notifyError(`Failed to submit application: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(false);
     }
@@ -195,6 +227,10 @@ const ApplyCertificate = () => {
                   <label className="block text-sm font-medium mb-2">Full Name</label>
                   <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required className="w-full p-4 border rounded-2xl" />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Applicant Photo</label>
+                  <input type="file" accept="image/*" onChange={handleFileChange('applicantPhoto')} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                </div>
               </>
             )}
 
@@ -237,6 +273,13 @@ const ApplyCertificate = () => {
                     <input type="text" name="birthPlace" value={formData.birthPlace} onChange={handleChange} required className="w-full p-4 border rounded-2xl" placeholder="Jimma, Ethiopia" />
                   </div>
                 </div>
+
+                {(applicationFor === 'child' || applicationFor === 'other') && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Child Photo</label>
+                    <input type="file" accept="image/*" onChange={handleFileChange('childPhoto')} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                  </div>
+                )}
               </>
             )}
 
@@ -260,9 +303,39 @@ const ApplyCertificate = () => {
                     <input type="text" name="marriagePlace" value={formData.marriagePlace} onChange={handleChange} required className="w-full p-4 border rounded-2xl" />
                   </div>
                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Husband Birth Date</label>
+                    <input type="date" name="husbandBirthDate" value={formData.husbandBirthDate} onChange={handleChange} className="w-full p-4 border rounded-2xl" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Husband Birth Place</label>
+                    <input type="text" name="husbandBirthPlace" value={formData.husbandBirthPlace} onChange={handleChange} className="w-full p-4 border rounded-2xl" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Wife Birth Date</label>
+                    <input type="date" name="wifeBirthDate" value={formData.wifeBirthDate} onChange={handleChange} className="w-full p-4 border rounded-2xl" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Wife Birth Place</label>
+                    <input type="text" name="wifeBirthPlace" value={formData.wifeBirthPlace} onChange={handleChange} className="w-full p-4 border rounded-2xl" />
+                  </div>
+                </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Witness Name</label>
                   <input type="text" name="witnessName" value={formData.witnessName} onChange={handleChange} required className="w-full p-4 border rounded-2xl" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Husband Photo</label>
+                    <input type="file" accept="image/*" onChange={handleFileChange('husbandPhoto')} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Wife Photo</label>
+                    <input type="file" accept="image/*" onChange={handleFileChange('wifePhoto')} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                  </div>
                 </div>
               </>
             )}
@@ -286,6 +359,10 @@ const ApplyCertificate = () => {
                 <div>
                   <label className="block text-sm font-medium mb-2">Cause of Death</label>
                   <input type="text" name="causeOfDeath" value={formData.causeOfDeath} onChange={handleChange} required className="w-full p-4 border rounded-2xl" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Deceased Photo</label>
+                  <input type="file" accept="image/*" onChange={handleFileChange('deceasedPhoto')} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
                 </div>
               </>
             )}

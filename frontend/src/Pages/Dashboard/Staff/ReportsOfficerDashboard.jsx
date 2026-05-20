@@ -8,12 +8,14 @@ import {
   LogOut,
   FileText,
 } from "lucide-react";
+import { useNotification } from '../../../components/NotificationProvider';
 
 export default function ReportsOfficerDashboard() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState(null);
   const [responseMessage, setResponseMessage] = useState("");
+  const { notifySuccess, notifyError } = useNotification();
 
   const navigate = useNavigate();
   const API = "http://localhost:5000/api";
@@ -50,10 +52,10 @@ export default function ReportsOfficerDashboard() {
       await fetchReports();
       setSelectedReport(null);
       setResponseMessage("");
-      alert("Report resolved and message sent to requester successfully!");
+      notifySuccess("Report resolved and message sent to requester successfully!");
     } catch (err) {
       console.error("Failed to resolve report:", err);
-      alert("Failed to resolve report. Please try again.");
+      notifyError("Failed to resolve report. Please try again.");
     }
   };
 

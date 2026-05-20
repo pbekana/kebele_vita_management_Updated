@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { FileText, Download, AlertTriangle, User, LogOut, Send, Phone, Mail, MapPin, Shield, CheckCircle, Clock, Printer, Briefcase } from 'lucide-react';
+import { useNotification } from '../../components/NotificationProvider';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -991,7 +992,7 @@ const ResidentDashboard = () => {
   // The approvedIdCert is resolved in the profile tab's conditional render.
   const handleDownloadIDCard = async (certId) => {
     if (!certId) {
-      alert('No approved ID card found. Please apply and wait for admin approval.');
+      notifyWarning('No approved ID card found. Please apply and wait for admin approval.');
       return;
     }
     try {
@@ -1008,7 +1009,7 @@ const ResidentDashboard = () => {
       window.URL.revokeObjectURL(link.href);
     } catch (err) {
       console.error('ID card download failed:', err);
-      alert(err.response?.data?.error || 'Failed to download ID card. Please try again.');
+      notifyError(err.response?.data?.error || 'Failed to download ID card. Please try again.');
     }
   };
 
@@ -1298,9 +1299,11 @@ const ResidentDashboard = () => {
     { label: 'Residency ID', icon: '🪪', path: 'residency-id' },
   ];
 
+  const { notifyError, notifyWarning } = useNotification();
+
   const downloadCertificate = async (cert) => {
     if (cert.status !== 'approved' && cert.status !== 'issued') {
-      alert(`❌ This certificate is '${cert.status}'. It must be approved by the admin before you can download it.`);
+      notifyWarning(`This certificate is '${cert.status}'. It must be approved by the admin before you can download it.`);
       return;
     }
     try {
@@ -1317,7 +1320,7 @@ const ResidentDashboard = () => {
       window.URL.revokeObjectURL(link.href);
     } catch (err) {
       console.error('Certificate download failed:', err);
-      alert(err.response?.data?.error || 'Failed to download certificate. Please try again.');
+      notifyError(err.response?.data?.error || 'Failed to download certificate. Please try again.');
     }
   };
 
@@ -1334,7 +1337,7 @@ const ResidentDashboard = () => {
       setMyReports(reportsRes.data.reports || []);
     } catch (err) {
       console.error("Failed to submit report:", err);
-      alert(err.response?.data?.error || "Failed to submit report. Please try again.");
+      notifyError(err.response?.data?.error || "Failed to submit report. Please try again.");
     } finally {
       setReportLoading(false);
     }

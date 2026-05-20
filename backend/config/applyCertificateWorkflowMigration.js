@@ -77,6 +77,65 @@ async function applyCertificateWorkflowMigration(pool) {
       'ADD COLUMN death_place VARCHAR(255) NULL'
     );
 
+    await addCol(
+      'child_photo_path',
+      'ADD COLUMN child_photo_path VARCHAR(500) NULL'
+    );
+    await addCol(
+      'hospital_evidence_path',
+      'ADD COLUMN hospital_evidence_path VARCHAR(500) NULL'
+    );
+    await addCol(
+      'deceased_resident_id',
+      'ADD COLUMN deceased_resident_id INT NULL'
+    );
+    await addCol(
+      'deceased_photo_path',
+      'ADD COLUMN deceased_photo_path VARCHAR(500) NULL'
+    );
+    await addCol(
+      'husband_photo_path',
+      'ADD COLUMN husband_photo_path VARCHAR(500) NULL'
+    );
+    await addCol(
+      'wife_photo_path',
+      'ADD COLUMN wife_photo_path VARCHAR(500) NULL'
+    );
+    await addCol(
+      'husband_birth_date',
+      'ADD COLUMN husband_birth_date DATE NULL'
+    );
+    await addCol(
+      'husband_birth_place',
+      'ADD COLUMN husband_birth_place VARCHAR(255) NULL'
+    );
+    await addCol(
+      'wife_birth_date',
+      'ADD COLUMN wife_birth_date DATE NULL'
+    );
+    await addCol(
+      'wife_birth_place',
+      'ADD COLUMN wife_birth_place VARCHAR(255) NULL'
+    );
+
+    const [typeRows] = await pool.query(
+      `SELECT COLUMN_TYPE AS t FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'certificates' AND COLUMN_NAME = 'certificate_type'`
+    );
+    const typeCol = typeRows[0]?.t || '';
+    if (!typeCol.includes('residency-id') || !typeCol.includes('residency')) {
+      await pool.query(
+        `ALTER TABLE certificates MODIFY COLUMN certificate_type ENUM(
+          'birth',
+          'marriage',
+          'death',
+          'residency-id',
+          'residency'
+        ) NOT NULL`
+      );
+      logger.info('Migration: certificates.certificate_type extended for residency and residency-id');
+    }
+
     const fkSpecs = [
       { col: 'assigned_staff_user_id', name: 'fk_certificates_assigned_staff' },
       { col: 'assigned_by_user_id', name: 'fk_certificates_assigned_by' },
@@ -129,6 +188,19 @@ async function applyCertificateWorkflowMigration(pool) {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         INDEX idx_user_notifications_user (user_id),
         INDEX idx_user_notifications_read (user_id, is_read)
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS family_relationships (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        resident_id INT NOT NULL,
+        family_member_id INT NOT NULL,
+        relationship_type VARCHAR(100) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (resident_id) REFERENCES residents(id) ON DELETE CASCADE,
+        FOREIGN KEY (family_member_id) REFERENCES residents(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_family_pair (resident_id, family_member_id)
       )
     `);
 

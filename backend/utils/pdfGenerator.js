@@ -189,13 +189,13 @@ function drawPhotoAndPersonal(doc, cert, startY) {
           cover:  [photoColW - 2, photoBoxH - 2],
         });
       } else {
-        drawPhotoPlaceholder(doc, startY, photoColW, photoBoxH);
+        drawPhotoPlaceholder(doc, MARGIN, startY, photoColW, photoBoxH);
       }
     } catch {
-      drawPhotoPlaceholder(doc, startY, photoColW, photoBoxH);
+      drawPhotoPlaceholder(doc, MARGIN, startY, photoColW, photoBoxH);
     }
   } else {
-    drawPhotoPlaceholder(doc, startY, photoColW, photoBoxH);
+    drawPhotoPlaceholder(doc, MARGIN, startY, photoColW, photoBoxH);
   }
 
   // Photo label underneath
@@ -237,11 +237,74 @@ function drawPhotoAndPersonal(doc, cert, startY) {
   return Math.max(py, thumbY + thumbH + 4);
 }
 
-function drawPhotoPlaceholder(doc, startY, colW, boxH) {
+function drawPhotoPlaceholder(doc, x, startY, colW, boxH) {
   doc.font('Helvetica').fontSize(6.5).fillColor(C.darkGray)
-     .text('👤\n3×4 Photo\nፎቶግራፍ', MARGIN + 2, startY + boxH / 2 - 14, {
+     .text('👤\n3×4 Photo\nፎቶግራፍ', x + 2, startY + boxH / 2 - 14, {
        width: colW - 4, align: 'center',
      });
+}
+
+function drawImageBox(doc, x, startY, width, height, photoPath) {
+  borderBox(doc, x, startY, width, height);
+  if (photoPath) {
+    const absPhoto = path.isAbsolute(photoPath)
+      ? photoPath
+      : path.join(__dirname, '..', photoPath);
+
+    try {
+      if (fs.existsSync(absPhoto)) {
+        doc.image(absPhoto, x + 1, startY + 1, {
+          width: width - 2,
+          height: height - 2,
+          cover: [width - 2, height - 2],
+        });
+        return;
+      }
+    } catch (_) {}
+  }
+  drawPhotoPlaceholder(doc, x, startY, width, height);
+}
+
+function drawCertImageSection(doc, cert, y) {
+  const type = cert.certificate_type;
+
+  if (type === 'marriage') {
+    y = sectionTitle(doc, 'Couple Photos / የባልና ሚስት ፎቶ', MARGIN, y, CONTENT_W);
+    const boxW = (CONTENT_W - 8) / 2;
+    const boxH = 76;
+    drawImageBox(doc, MARGIN, y, boxW, boxH, cert.husband_photo_path);
+    drawImageBox(doc, MARGIN + boxW + 8, y, boxW, boxH, cert.wife_photo_path);
+
+    doc.font('Helvetica').fontSize(5.5).fillColor(C.darkGray)
+       .text('Husband / ባል', MARGIN, y + boxH + 2, { width: boxW, align: 'center' });
+    doc.font('Helvetica').fontSize(5.5).fillColor(C.darkGray)
+       .text('Wife / ሚስት', MARGIN + boxW + 8, y + boxH + 2, { width: boxW, align: 'center' });
+    return y + boxH + 16;
+  }
+
+  if (type === 'birth') {
+    y = sectionTitle(doc, 'Child Photo / የልጅ ፎቶ', MARGIN, y, CONTENT_W);
+    const boxW = 110;
+    const boxH = 90;
+    drawImageBox(doc, MARGIN, y, boxW, boxH, cert.child_photo_path);
+
+    doc.font('Helvetica').fontSize(5.5).fillColor(C.darkGray)
+       .text('Child Photo / የልጅ ፎቶ', MARGIN, y + boxH + 2, { width: boxW, align: 'center' });
+    return y + boxH + 14;
+  }
+
+  if (type === 'death') {
+    y = sectionTitle(doc, 'Deceased Photo / የሞተው ፎቶ', MARGIN, y, CONTENT_W);
+    const boxW = 110;
+    const boxH = 90;
+    drawImageBox(doc, MARGIN, y, boxW, boxH, cert.deceased_photo_path);
+
+    doc.font('Helvetica').fontSize(5.5).fillColor(C.darkGray)
+       .text('Deceased Photo / የሞተው ፎቶ', MARGIN, y + boxH + 2, { width: boxW, align: 'center' });
+    return y + boxH + 14;
+  }
+
+  return y;
 }
 
 // ─── FAMILY ─────────────────────────────────────────────────────────────────
@@ -311,6 +374,7 @@ function drawContact(doc, cert, y) {
 
 // ─── CERTIFICATE-SPECIFIC SECTION ───────────────────────────────────────────
 function drawCertSpecific(doc, cert, y) {
+  y = drawCertImageSection(doc, cert, y);
   const type = cert.certificate_type;
 
   if (type === 'residency-id' || type === 'residency') {
@@ -384,6 +448,19 @@ function drawCertSpecific(doc, cert, y) {
 
     fieldRow(doc, 'Witness 1 / ምስክር 1', s(cert.witness_name), MARGIN, y, lW * 0.6, CONTENT_W);
     y += 10;
+
+    if (cert.husband_birth_date || cert.husband_birth_place || cert.wife_birth_date || cert.wife_birth_place) {
+      y = sectionTitle(doc, 'Partner Birth Details / የአጋር የልደት መረጃ', MARGIN, y, CONTENT_W);
+      const detailColW = CONTENT_W / 2 - 4;
+      const detailLW = detailColW * 0.46;
+
+      fieldRow(doc, 'Husband Birth Date / የባል የልደት ቀን', fmtDate(cert.husband_birth_date), MARGIN, y, detailLW, detailColW);
+      fieldRow(doc, 'Wife Birth Date / የሚስት የልደት ቀን', fmtDate(cert.wife_birth_date), MARGIN + detailColW + 8, y, detailLW, detailColW);
+      y += 10;
+      fieldRow(doc, 'Husband Birthplace / የባል የልደት ቦታ', s(cert.husband_birth_place), MARGIN, y, detailLW, detailColW);
+      fieldRow(doc, 'Wife Birthplace / የሚስት የልደት ቦታ', s(cert.wife_birth_place), MARGIN + detailColW + 8, y, detailLW, detailColW);
+      y += 10;
+    }
 
   } else {
     // Generic / Support Letter / Residency

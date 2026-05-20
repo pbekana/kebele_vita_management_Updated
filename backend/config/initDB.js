@@ -79,7 +79,7 @@ const initDB = async () => {
     firstname VARCHAR(100) NOT NULL,
     lastname VARCHAR(100) NOT NULL,
 
-    gender ENUM('male','female') NOT NULL,
+    gender ENUM('male','female') NULL,
 
     birth_date DATE NOT NULL,
     birthplace VARCHAR(255),
@@ -98,6 +98,19 @@ const initDB = async () => {
 );
       `
     )
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS family_relationships (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        resident_id INT NOT NULL,
+        family_member_id INT NOT NULL,
+        relationship_type VARCHAR(100) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (resident_id) REFERENCES residents(id) ON DELETE CASCADE,
+        FOREIGN KEY (family_member_id) REFERENCES residents(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_family_pair (resident_id, family_member_id)
+      )
+    `);
     // 4. KEBELE STAFF TABLE
     await pool.query(`
       CREATE TABLE IF NOT EXISTS kebele_staff (
@@ -122,23 +135,35 @@ const initDB = async () => {
   certificate_type ENUM(
     'birth',
     'marriage',
-    'death'
+    'death',
+    'residency-id',
+    'residency'
   ) NOT NULL,
 
  
   child_name VARCHAR(255),
+  child_photo_path VARCHAR(500),
+  hospital_evidence_path VARCHAR(500),
   mother_name VARCHAR(255),
   father_name VARCHAR(255),
   birth_place VARCHAR(255),
   birth_date DATE,
 
+  deceased_resident_id INT NULL,
+  deceased_photo_path VARCHAR(500),
   death_date DATE,
   cause_of_death TEXT,
   death_place VARCHAR(255) NULL,
 
  
   husband_name VARCHAR(255),
+  husband_photo_path VARCHAR(500),
+  husband_birth_date DATE,
+  husband_birth_place VARCHAR(255),
   wife_name VARCHAR(255),
+  wife_photo_path VARCHAR(500),
+  wife_birth_date DATE,
+  wife_birth_place VARCHAR(255),
   marriage_date DATE,
   marriage_place VARCHAR(255),
   witness_name VARCHAR(255),

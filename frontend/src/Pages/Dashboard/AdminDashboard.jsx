@@ -4,6 +4,7 @@ import {
   Shield, Users, FileText, AlertTriangle,
   CheckCircle, XCircle, Bell, Briefcase, ClipboardList
 } from 'lucide-react';
+import { useNotification } from '../../components/NotificationProvider';
 
 const API = 'http://localhost:5000/api';
 
@@ -35,6 +36,7 @@ const AdminDashboard = () => {
   const [certSearch, setCertSearch] = useState('');
   const [certError, setCertError] = useState(null);
   const [assignTo, setAssignTo] = useState({});
+  const { notifySuccess, notifyError, notifyWarning } = useNotification();
 
   const refreshCertificates = async () => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -90,10 +92,10 @@ const AdminDashboard = () => {
       setAssignedToStaffId('');
       setInvestigationNotes('');
       await refreshReports();
-      alert("Report investigation updated successfully!");
+      notifySuccess("Report investigation updated successfully!");
     } catch (err) {
       console.error("Failed to update status and assign staff:", err);
-      alert("Failed to update status and assign staff. Please try again.");
+      notifyError("Failed to update status and assign staff. Please try again.");
     }
   };
 
@@ -158,33 +160,33 @@ const AdminDashboard = () => {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
       await axios.put(`${API}/admin/certificates/${id}/approve`, {}, config);
-      alert(`Certificate #${id} approved.`);
+      notifySuccess(`Certificate #${id} approved.`);
       await refreshCertificates();
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to approve certificate');
+      notifyError(err.response?.data?.error || 'Failed to approve certificate');
     }
   };
 
   const handleReject = async (id) => {
     const reason = window.prompt('Rejection reason (required):');
     if (!reason || !reason.trim()) {
-      alert('A rejection reason is required.');
+      notifyWarning('A rejection reason is required.');
       return;
     }
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
       await axios.put(`${API}/admin/certificates/${id}/reject`, { reason: reason.trim() }, config);
-      alert(`Certificate #${id} rejected.`);
+      notifySuccess(`Certificate #${id} rejected.`);
       await refreshCertificates();
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to reject certificate');
+      notifyError(err.response?.data?.error || 'Failed to reject certificate');
     }
   };
 
   const handleAssign = async (certId, staffUserId) => {
     if (!staffUserId) {
-      alert('Select a staff member to assign.');
+      notifyWarning('Select a staff member to assign.');
       return;
     }
     try {
@@ -195,10 +197,10 @@ const AdminDashboard = () => {
         { staff_user_id: Number(staffUserId) },
         config
       );
-      alert(`Request #${certId} assigned to staff.`);
+      notifySuccess(`Request #${certId} assigned to staff.`);
       await refreshCertificates();
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to assign certificate');
+      notifyError(err.response?.data?.error || 'Failed to assign certificate');
     }
   };
 
@@ -269,7 +271,7 @@ const AdminDashboard = () => {
 
     files.forEach(file => {
       if (file.size > 5 * 1024 * 1024) {
-        alert("Each image must be less than 5MB");
+        notifyWarning("Each image must be less than 5MB");
         return;
       }
       const preview = URL.createObjectURL(file);
@@ -299,7 +301,7 @@ const AdminDashboard = () => {
         staff.user_id === userId ? { ...staff, is_active: !isActive } : staff
       ));
     } catch (err) {
-      alert('Failed to update staff status');
+      notifyError('Failed to update staff status');
     }
   };
 
@@ -313,9 +315,9 @@ const AdminDashboard = () => {
       const tasksRes = await axios.get('http://localhost:5000/api/admin/tasks', config);
       setTasks(tasksRes.data.tasks || []);
       setNewTask({ title: '', description: '', task_type: 'id_card', assigned_to: '', resident_id: '', due_date: '' });
-      alert('Task assigned successfully!');
+      notifySuccess('Task assigned successfully!');
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to assign task');
+      notifyError(err.response?.data?.error || 'Failed to assign task');
     }
   };
 
@@ -328,9 +330,9 @@ const AdminDashboard = () => {
       
       const tasksRes = await axios.get('http://localhost:5000/api/admin/tasks', config);
       setTasks(tasksRes.data.tasks || []);
-      alert('Task reassigned successfully!');
+      notifySuccess('Task reassigned successfully!');
     } catch (err) {
-      alert('Failed to reassign task');
+      notifyError('Failed to reassign task');
     }
   };
 

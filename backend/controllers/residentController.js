@@ -1,9 +1,16 @@
 const fs = require('fs');
+const path = require('path');
 const { validationResult } = require('express-validator');
 
 const { pool } = require('../config/connectDB');
 const logger = require('../utils/logger');
 const { generateCertificate } = require('../utils/pdfGenerator');
+
+const backendRoot = path.join(__dirname, '..');
+const normalizeUploadPath = (file) => {
+  if (!file || !file.path) return null;
+  return path.relative(backendRoot, file.path).replace(/\\/g, '/');
+};
 
 /**
  * Helper: Handle validation errors
@@ -182,11 +189,24 @@ const requestCertificate = async (req, res) => {
     marriageDate, marriage_date = marriageDate,
     marriagePlace, marriage_place = marriagePlace,
     witnessName, witness_name = witnessName,
+    husbandBirthDate, husband_birth_date = husbandBirthDate,
+    husbandBirthPlace, husband_birth_place = husbandBirthPlace,
+    wifeBirthDate, wife_birth_date = wifeBirthDate,
+    wifeBirthPlace, wife_birth_place = wifeBirthPlace,
 
     // Residency fields
     fullName, full_name = fullName,
-    existingIdNumber, existing_id_number = existingIdNumber
+    existingIdNumber, existing_id_number = existingIdNumber,
+    hospitalEvidence, hospital_evidence = hospitalEvidence,
+    deceasedResidentId, deceased_resident_id = deceasedResidentId
   } = req.body;
+
+  const childPhotoPath = normalizeUploadPath(req.files?.childPhoto?.[0]);
+  const husbandPhotoPath = normalizeUploadPath(req.files?.husbandPhoto?.[0]);
+  const wifePhotoPath = normalizeUploadPath(req.files?.wifePhoto?.[0]);
+  const deceasedPhotoPath = normalizeUploadPath(req.files?.deceasedPhoto?.[0]);
+  const applicantPhotoPath = normalizeUploadPath(req.files?.applicantPhoto?.[0]);
+  const hospitalEvidencePath = normalizeUploadPath(req.files?.hospitalEvidence?.[0]);
 
   let connection;
 
@@ -206,15 +226,103 @@ const requestCertificate = async (req, res) => {
       });
     }
 
+    if (certificate_type === 'birth') {
+      const [matchingChildren] = await connection.query(
+        `SELECT id FROM children WHERE lastname = ? LIMIT 1`,
+        [resident.firstname]
+      );
+
+      if (matchingChildren.length === 0 && !hospitalEvidencePath) {
+        await connection.rollback();
+        return res.status(400).json({
+          error: 'No child record was found with your name. Please upload a hospital evidence document before we can continue.',
+        });
+      }
+    }
+
+    let resolvedDeceasedResidentId = null;
+    if (certificate_type === 'death') {
+      if (deceased_resident_id) {
+        resolvedDeceasedResidentId = Number(deceased_resident_id);
+        if (!Number.isInteger(resolvedDeceasedResidentId) || resolvedDeceasedResidentId <= 0) {
+          await connection.rollback();
+          return res.status(400).json({
+            error: 'Please provide a valid deceased resident ID.',
+          });
+        }
+      }
+
+      if (!resolvedDeceasedResidentId && deceased_name) {
+        const nameParts = deceased_name.trim().split(/\s+/);
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        if (!firstName || !lastName) {
+          await connection.rollback();
+          return res.status(400).json({
+            error: 'Please provide the full name of the deceased person.',
+          });
+        }
+
+        const [matches] = await connection.query(
+          `SELECT id FROM residents WHERE firstname = ? AND lastname = ? LIMIT 1`,
+          [firstName, lastName]
+        );
+
+        if (matches.length === 0) {
+          await connection.rollback();
+          return res.status(404).json({
+            error: 'We could not find a resident matching the deceased person’s name. Please verify the information and try again.',
+          });
+        }
+
+        resolvedDeceasedResidentId = matches[0].id;
+      }
+
+      if (!resolvedDeceasedResidentId) {
+        await connection.rollback();
+        return res.status(400).json({
+          error: 'A deceased resident must be identified before a death certificate can be requested.',
+        });
+      }
+
+      const [familyCheck] = await connection.query(
+        `SELECT 1 FROM family_relationships
+         WHERE (resident_id = ? AND family_member_id = ?)
+            OR (resident_id = ? AND family_member_id = ?)
+         LIMIT 1`,
+        [
+          resident.id,
+          resolvedDeceasedResidentId,
+          resolvedDeceasedResidentId,
+          resident.id,
+        ]
+      );
+
+      if (!familyCheck[0]) {
+        await connection.rollback();
+        return res.status(403).json({
+          error: 'A death certificate can only be requested by a valid family member of the deceased.',
+        });
+      }
+    }
+
     const final_child_name = certificate_type === 'death' ? (deceased_name || null) :
                              (certificate_type === 'residency-id' || certificate_type === 'residency') ? (full_name || null) :
-                             (child_name || null);
+                             (child_name || full_name || null);
 
     const final_husband_name = (certificate_type === 'residency-id' || certificate_type === 'residency') ? (existing_id_number || null) : (husband_name || null);
 
     let certificateId = null;
 
     if (true) {
+      if (applicantPhotoPath && (certificate_type === 'residency-id' || certificate_type === 'residency')) {
+        await connection.query(
+          `UPDATE residents SET photo_path = ? WHERE id = ?`,
+          [applicantPhotoPath, resident.id]
+        );
+      }
+
       // Create certificate request
       const [certificateResult] = await connection.query(
         `INSERT INTO certificates
@@ -222,34 +330,54 @@ const requestCertificate = async (req, res) => {
           resident_id,
           certificate_type,
           child_name,
+          child_photo_path,
+          hospital_evidence_path,
           mother_name,
           father_name,
           birth_place,
           birth_date,
+          deceased_resident_id,
+          deceased_photo_path,
           death_date,
           cause_of_death,
           death_place,
           husband_name,
+          husband_photo_path,
           wife_name,
+          wife_photo_path,
+          husband_birth_date,
+          husband_birth_place,
+          wife_birth_date,
+          wife_birth_place,
           marriage_date,
           marriage_place,
           witness_name,
           status
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
         [
           resident.id,
           certificate_type,
           final_child_name,
+          childPhotoPath,
+          hospitalEvidencePath,
           mother_name || null,
           father_name || null,
           birth_place || null,
           birth_date || null,
+          resolvedDeceasedResidentId,
+          deceasedPhotoPath,
           death_date || null,
           cause_of_death || null,
           death_place || null,
           final_husband_name,
+          husbandPhotoPath,
           wife_name || null,
+          wifePhotoPath,
+          husband_birth_date || null,
+          husband_birth_place || null,
+          wife_birth_date || null,
+          wife_birth_place || null,
           marriage_date || null,
           marriage_place || null,
           witness_name || null
