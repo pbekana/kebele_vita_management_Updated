@@ -6,6 +6,7 @@ import { NotificationProvider } from './components/NotificationProvider';
 import LandingPage from './Pages/Landing/LandingPage';
 import RegisterForm from './Pages/Register/RegisterForm';
 import LoginForm from './Pages/Login/LoginForm';
+import ForgotPassword from './Pages/Login/ForgotPassword';
 
 // Dashboards
 import ResidentDashboard from './Pages/Dashboard/ResidentDashboard';
@@ -35,6 +36,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/register" element={<RegisterForm />} />
         <Route path="/login" element={<LoginForm />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         
         {/* Staff Login Route */}
         <Route path="/staff-login" element={<StaffLogin />} />

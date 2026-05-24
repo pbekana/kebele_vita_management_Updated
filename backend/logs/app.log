@@ -184,3 +184,48 @@
 [2026-05-20T10:08:45.898Z] [INFO] Migration: added certificates.hospital_evidence_path
 [2026-05-20T10:08:46.090Z] [INFO] Migration: added certificates.deceased_resident_id
 [2026-05-20T10:08:46.183Z] [INFO] Server running on port 5000
+[2026-05-20T11:01:36.890Z] [INFO] Server running on port 5000
+[2026-05-20T11:05:13.842Z] [ERROR] Unhandled: Only image uploads are allowed
+[2026-05-20T13:58:30.054Z] [INFO] Server running on port 5000
+[2026-05-20T14:07:34.968Z] [INFO] Certificate request 12 created by resident 9
+[2026-05-20T14:11:49.879Z] [INFO] Admin 1 assigned certificate 12 to staff 3
+[2026-05-20T14:13:21.549Z] [INFO] Staff 3 prepared certificate 12 for admin approval
+[2026-05-20T14:17:58.724Z] [INFO] Admin 1 approved certificate 12
+[2026-05-23T21:55:42.424Z] [INFO] Server running on port 5000
+[2026-05-23T22:03:26.358Z] [INFO] Resident registered, awaiting OTP verification: peterbekana35@gmail.com
+[2026-05-23T22:50:05.842Z] [INFO] Resident registered, awaiting OTP verification: peterbekana35@gmail.com
+[2026-05-24T07:42:04.088Z] [INFO] Server running on port 5000
+[2026-05-24T08:01:25.926Z] [INFO] Resident registered, awaiting OTP verification: peterbekana79@gmail.com
+[2026-05-24T08:12:33.276Z] [INFO] Server running on port 5000
+[2026-05-24T08:23:39.241Z] [INFO] Server running on port 5000
+[2026-05-24T08:24:09.555Z] [INFO] Resident registered, awaiting OTP verification: peterbekana35@gmail.com
+[2026-05-24T08:28:59.388Z] [INFO] Resident registered, awaiting OTP verification: peterbekana35@gmail.com
+[2026-05-24T08:31:29.947Z] [INFO] User verified OTP successfully: peterbekana35@gmail.com
+[2026-05-24T08:35:08.808Z] [INFO] Server running on port 5000
+[2026-05-24T08:40:39.593Z] [INFO] Resident registered, awaiting OTP verification: peterbekana35@gmail.com
+[2026-05-24T08:47:14.427Z] [INFO] Server running on port 5000
+[2026-05-24T08:50:43.441Z] [INFO] Resident registered, awaiting OTP verification: bekanapeter@gmail.com
+[2026-05-24T08:57:55.993Z] [INFO] Resident registered, awaiting OTP verification: peterbekana35@gmail.com
+[2026-05-24T08:59:33.184Z] [INFO] Server running on port 5000
+[2026-05-24T09:07:54.432Z] [INFO] Server running on port 5000
+[2026-05-24T09:08:13.346Z] [INFO] Registration OTP email sent to: bekanapeter@gmail.com
+[2026-05-24T09:08:13.574Z] [INFO] Resident registered, awaiting OTP verification: bekanapeter@gmail.com
+[2026-05-24T09:13:01.395Z] [INFO] Registration OTP email sent to: peterbekana35@gmail.com
+[2026-05-24T09:13:01.492Z] [INFO] Resident registered, awaiting OTP verification: peterbekana35@gmail.com
+[2026-05-24T09:15:22.798Z] [INFO] Server running on port 5000
+[2026-05-24T09:18:53.905Z] [INFO] Server running on port 5000
+[2026-05-24T09:24:34.029Z] [INFO] Registration OTP email sent to: peterbekana35@gmail.com
+[2026-05-24T09:24:34.053Z] [INFO] Resident registered, awaiting OTP verification: peterbekana35@gmail.com
+[2026-05-24T09:28:44.809Z] [INFO] Registration OTP email sent to: peterbekana35@gmail.com
+[2026-05-24T09:28:44.864Z] [INFO] Resident registered, awaiting OTP verification: peterbekana35@gmail.com
+[2026-05-24T09:38:51.414Z] [INFO] Server running on port 5000
+[2026-05-24T09:39:25.428Z] [INFO] Registration OTP email sent to: bekanapeter@gmail.com
+[2026-05-24T09:39:25.803Z] [INFO] Resident registered, awaiting OTP verification: bekanapeter@gmail.com
+[2026-05-24T09:39:31.361Z] [INFO] Resent OTP to unverified user: bekanapeter@gmail.com
+[2026-05-24T09:44:51.917Z] [INFO] Registration OTP email sent to: peterbekana35@gmail.com
+[2026-05-24T09:44:51.957Z] [INFO] Resident registered, awaiting OTP verification: peterbekana35@gmail.com
+[2026-05-24T09:46:10.168Z] [INFO] User verified OTP successfully: peterbekana35@gmail.com
+[2026-05-24T09:48:12.649Z] [INFO] Certificate request 13 created by resident 25
+[2026-05-24T09:49:27.913Z] [INFO] Admin 1 assigned certificate 13 to staff 5
+[2026-05-24T09:53:19.023Z] [INFO] Staff 5 prepared certificate 13 for admin approval
+[2026-05-24T09:53:54.670Z] [INFO] Admin 1 approved certificate 13

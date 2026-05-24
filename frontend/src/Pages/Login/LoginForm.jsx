@@ -316,10 +316,15 @@ export default function LoginForm() {
               {loading ? "Signing in..." : "Sign In"}
             </button>
 
-            <p className="text-center text-sm text-slate-500">
-              Don't have an account?{" "}
-              <Link to="/register" className="text-blue-600 font-semibold hover:underline">Register</Link>
-            </p>
+            <div className="flex flex-col items-center gap-2 mt-4 text-sm text-slate-500">
+              <Link to="/forgot-password" className="text-blue-600 font-semibold hover:underline">
+                Forgot Password?
+              </Link>
+              <p>
+                Don't have an account?{" "}
+                <Link to="/register" className="text-blue-600 font-semibold hover:underline">Register</Link>
+              </p>
+            </div>
 
             <p className="text-center text-sm text-slate-500">
               Staff Member?{" "}

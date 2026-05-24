@@ -53,10 +53,10 @@ function fieldRow(doc, label, value, x, y, labelW, totalW) {
   const valX = x + labelW + 2;
   const valW = totalW - labelW - 2;
 
-  doc.font('Helvetica-Bold').fontSize(6.5).fillColor(C.navy)
+  doc.font('Amharic-Bold').fontSize(6.5).fillColor(C.navy)
      .text(label, x, y, { width: labelW, lineBreak: false });
 
-  doc.font('Helvetica').fontSize(6.5).fillColor(C.black)
+  doc.font('Amharic-Regular').fontSize(6.5).fillColor(C.black)
      .text(s(value), valX, y, { width: valW, lineBreak: false });
 }
 
@@ -69,7 +69,7 @@ function sectionTitle(doc, title, x, y, w) {
      .strokeColor(C.navy)
      .stroke();
 
-  doc.font('Helvetica-Bold').fontSize(7).fillColor(C.navy)
+  doc.font('Amharic-Bold').fontSize(7).fillColor(C.navy)
      .text(title.toUpperCase(), x, y, { width: w });
 
   return y + 14; // return next Y after section title
@@ -84,7 +84,7 @@ function borderBox(doc, x, y, w, h) {
 function drawWatermark(doc) {
   doc.save();
   doc.rotate(-35, { origin: [A5_W / 2, A5_H / 2] });
-  doc.font('Helvetica-Bold')
+  doc.font('Amharic-Bold')
      .fontSize(38)
      .fillColor('rgba(200,200,200,0.18)')
      .fillOpacity(0.18)
@@ -110,14 +110,14 @@ function drawHeader(doc, cert) {
   let hy = 6;
 
   // Country name — English
-  doc.font('Helvetica-Bold').fontSize(8.5).fillColor(C.white)
+  doc.font('Amharic-Bold').fontSize(8.5).fillColor(C.white)
      .text('FEDERAL DEMOCRATIC REPUBLIC OF ETHIOPIA', MARGIN, hy, {
        width: CONTENT_W, align: 'center',
      });
   hy += 11;
 
   // Country name — Amharic
-  doc.font('Helvetica').fontSize(7.5).fillColor(C.white)
+  doc.font('Amharic-Regular').fontSize(7.5).fillColor(C.white)
      .text(' የኢትዮጵያ ፌዴራላዊ ዴሞክራሲያዊ ሪፐብሊክ', MARGIN, hy, {
        width: CONTENT_W, align: 'center',
      });
@@ -128,13 +128,13 @@ function drawHeader(doc, cert) {
   const logoX = MARGIN + (CONTENT_W / 2) - logoSize / 2 - 70;
   doc.circle(logoX + logoSize / 2, hy + logoSize / 2, logoSize / 2)
      .lineWidth(0.8).strokeColor(C.white).stroke();
-  doc.font('Helvetica').fontSize(4).fillColor(C.white)
+  doc.font('Amharic-Regular').fontSize(4).fillColor(C.white)
      .text('LOGO', logoX, hy + logoSize / 2 - 2, {
        width: logoSize, align: 'center',
      });
 
   // Kebele info next to logo
-  doc.font('Helvetica').fontSize(6.2).fillColor(C.white)
+  doc.font('Amharic-Regular').fontSize(6.2).fillColor(C.white)
      .text(
        'Oromia Region · Jimma Zone · Jimma Woreda · Heremata Mentina Kebele\n' +
        'ኦሮሚያ ክልል · ጅማ ዞን · ጅማ ወረዳ · ሔረማታ መንቲና ቀበሌ',
@@ -153,12 +153,12 @@ function drawHeader(doc, cert) {
   };
   const certTitle = titleMap[cert.certificate_type] || `${(cert.certificate_type || 'CERTIFICATE').toUpperCase()}`;
 
-  doc.font('Helvetica-Bold').fontSize(8).fillColor('#ffeb3b')
+  doc.font('Amharic-Bold').fontSize(8).fillColor('#ffeb3b')
      .text(certTitle, MARGIN, hy, { width: CONTENT_W, align: 'center' });
   hy += 11;
 
   // Certificate number
-  doc.font('Helvetica-Bold').fontSize(6.5).fillColor(C.white)
+  doc.font('Amharic-Bold').fontSize(6.5).fillColor(C.white)
      .text(`Certificate No / ምስክር ወረቀት ቁጥር: ${certNumber(cert)}`, MARGIN, hy, {
        width: CONTENT_W, align: 'center',
      });
@@ -199,7 +199,7 @@ function drawPhotoAndPersonal(doc, cert, startY) {
   }
 
   // Photo label underneath
-  doc.font('Helvetica').fontSize(5.5).fillColor(C.darkGray)
+  doc.font('Amharic-Regular').fontSize(5.5).fillColor(C.darkGray)
      .text('Photo / ፎቶ', MARGIN, startY + photoBoxH + 1, { width: photoColW, align: 'center' });
 
   // ── Right thumb fingerprint placeholder ──
@@ -207,7 +207,7 @@ function drawPhotoAndPersonal(doc, cert, startY) {
   doc.rect(MARGIN, thumbY, photoColW, thumbH)
      .lineWidth(0.5).dash(2, { space: 2 }).strokeColor(C.gray).stroke();
   doc.undash();
-  doc.font('Helvetica').fontSize(5).fillColor(C.darkGray)
+  doc.font('Amharic-Regular').fontSize(5).fillColor(C.darkGray)
      .text('Right Thumb / የቀኝ አውራ ጣት', MARGIN, thumbY + thumbH / 2 - 4, {
        width: photoColW, align: 'center',
      });
@@ -238,7 +238,7 @@ function drawPhotoAndPersonal(doc, cert, startY) {
 }
 
 function drawPhotoPlaceholder(doc, x, startY, colW, boxH) {
-  doc.font('Helvetica').fontSize(6.5).fillColor(C.darkGray)
+  doc.font('Amharic-Regular').fontSize(6.5).fillColor(C.darkGray)
      .text('👤\n3×4 Photo\nፎቶግራፍ', x + 2, startY + boxH / 2 - 14, {
        width: colW - 4, align: 'center',
      });
@@ -275,9 +275,9 @@ function drawCertImageSection(doc, cert, y) {
     drawImageBox(doc, MARGIN, y, boxW, boxH, cert.husband_photo_path);
     drawImageBox(doc, MARGIN + boxW + 8, y, boxW, boxH, cert.wife_photo_path);
 
-    doc.font('Helvetica').fontSize(5.5).fillColor(C.darkGray)
+    doc.font('Amharic-Regular').fontSize(5.5).fillColor(C.darkGray)
        .text('Husband / ባል', MARGIN, y + boxH + 2, { width: boxW, align: 'center' });
-    doc.font('Helvetica').fontSize(5.5).fillColor(C.darkGray)
+    doc.font('Amharic-Regular').fontSize(5.5).fillColor(C.darkGray)
        .text('Wife / ሚስት', MARGIN + boxW + 8, y + boxH + 2, { width: boxW, align: 'center' });
     return y + boxH + 16;
   }
@@ -288,7 +288,7 @@ function drawCertImageSection(doc, cert, y) {
     const boxH = 90;
     drawImageBox(doc, MARGIN, y, boxW, boxH, cert.child_photo_path);
 
-    doc.font('Helvetica').fontSize(5.5).fillColor(C.darkGray)
+    doc.font('Amharic-Regular').fontSize(5.5).fillColor(C.darkGray)
        .text('Child Photo / የልጅ ፎቶ', MARGIN, y + boxH + 2, { width: boxW, align: 'center' });
     return y + boxH + 14;
   }
@@ -299,7 +299,7 @@ function drawCertImageSection(doc, cert, y) {
     const boxH = 90;
     drawImageBox(doc, MARGIN, y, boxW, boxH, cert.deceased_photo_path);
 
-    doc.font('Helvetica').fontSize(5.5).fillColor(C.darkGray)
+    doc.font('Amharic-Regular').fontSize(5.5).fillColor(C.darkGray)
        .text('Deceased Photo / የሞተው ፎቶ', MARGIN, y + boxH + 2, { width: boxW, align: 'center' });
     return y + boxH + 14;
   }
@@ -503,7 +503,7 @@ function drawFooter(doc) {
   // Left signature line
   doc.moveTo(MARGIN, sigLineY).lineTo(MARGIN + sigW, sigLineY)
      .lineWidth(0.6).strokeColor(C.darkGray).stroke();
-  doc.font('Helvetica-Bold').fontSize(5.5).fillColor(C.darkGray)
+  doc.font('Amharic-Bold').fontSize(5.5).fillColor(C.darkGray)
      .text('Registrar Signature / ሬጅስትራር ፊርማ', MARGIN, sigLineY + 2, {
        width: sigW, align: 'center',
      });
@@ -514,20 +514,20 @@ function drawFooter(doc) {
   doc.circle(stampCX, stampCY, stampW / 2 - 2)
      .lineWidth(0.8).dash(2, { space: 2 }).strokeColor('#f44336').stroke();
   doc.undash();
-  doc.font('Helvetica-Bold').fontSize(4.5).fillColor('#f44336')
+  doc.font('Amharic-Bold').fontSize(4.5).fillColor('#f44336')
      .text('OFFICIAL\nSTAMP\nማህተም', stampCX - 14, stampCY - 9, { width: 28, align: 'center' });
 
   // Right signature line
   doc.moveTo(sigRX, sigLineY).lineTo(sigRX + sigW, sigLineY)
      .lineWidth(0.6).strokeColor(C.darkGray).stroke();
-  doc.font('Helvetica-Bold').fontSize(5.5).fillColor(C.darkGray)
+  doc.font('Amharic-Bold').fontSize(5.5).fillColor(C.darkGray)
      .text('Kebele Manager / ሥራ አስኪያጅ ፊርማ', sigRX, sigLineY + 2, {
        width: sigW, align: 'center',
      });
 
   // Warning text
   const warnY = footerY + 42;
-  doc.font('Helvetica').fontSize(5).fillColor(C.darkGray)
+  doc.font('Amharic-Regular').fontSize(5).fillColor(C.darkGray)
      .text(
        'This certificate is valid only with official stamp and signature. / ' +
        'ይህ ምስክር ወረቀት የሚፀናው ኦፊሴላዊ ማህተም እና ፊርማዎች ሲኖሩት ብቻ ነው።',
@@ -564,6 +564,13 @@ const generateCertificate = (cert, writable) => {
   });
 
   doc.pipe(writable);
+
+  const fontRegular = path.join(__dirname, '..', 'assets', 'fonts', 'NotoSansEthiopic-Regular.ttf');
+  const fontBold = path.join(__dirname, '..', 'assets', 'fonts', 'NotoSansEthiopic-Bold.ttf');
+  
+  doc.registerFont('Amharic-Regular', fontRegular);
+  doc.registerFont('Amharic-Bold', fontBold);
+
 
   // ── Watermark (drawn first, behind everything) ──
   drawWatermark(doc);

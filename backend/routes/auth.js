@@ -5,7 +5,11 @@ const { body } = require('express-validator');
 const {
   register,
   login,
-  getMe
+  getMe,
+  verifyOTP,
+  resendOTP,
+  forgotPassword,
+  resetPassword
 } = require('../controllers/authController');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -33,6 +37,68 @@ router.post(
   register
 );
 
+/**
+ * ======================
+ * VERIFY OTP
+ * ======================
+ * Public route
+ */
+router.post(
+  '/verify-otp',
+  authLimiter,
+  [
+    body('email').isEmail().withMessage('Valid email required'),
+    body('otp').notEmpty().withMessage('OTP is required')
+  ],
+  verifyOTP
+);
+
+/**
+ * ======================
+ * RESEND OTP
+ * ======================
+ * Public route — for users stuck on OTP step
+ */
+router.post(
+  '/resend-otp',
+  authLimiter,
+  [
+    body('email').isEmail().withMessage('Valid email required')
+  ],
+  resendOTP
+);
+
+/**
+ * ======================
+ * FORGOT PASSWORD
+ * ======================
+ * Public route
+ */
+router.post(
+  '/forgot-password',
+  authLimiter,
+  [
+    body('identifier').notEmpty().withMessage('Email or phone number is required')
+  ],
+  forgotPassword
+);
+
+/**
+ * ======================
+ * RESET PASSWORD
+ * ======================
+ * Public route
+ */
+router.post(
+  '/reset-password',
+  authLimiter,
+  [
+    body('email').isEmail().withMessage('Valid email required'),
+    body('otp').notEmpty().withMessage('Reset code is required'),
+    body('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+  ],
+  resetPassword
+);
 
 /**
  * ======================
