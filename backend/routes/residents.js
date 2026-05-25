@@ -99,6 +99,10 @@ const {
   getProfile,
   listMyNotifications,
   markNotificationRead,
+  getCertificatePreviewData,
+  createDeathReport,
+  getMyChildren,
+  registerChild,
 } = require('../controllers/residentController');
 
 const CERT_IMAGE_UPLOAD_DIR = path.join(__dirname, '..', 'uploads', 'certificates', 'images');
@@ -198,6 +202,50 @@ router.post(
     body('description').notEmpty(),
   ],
   submitFeedback
+);
+
+// =======================
+// CERTIFICATE DATA (Backend-Driven)
+// =======================
+
+// Get certificate preview data by type (birth, marriage, death, residency-id)
+router.get('/certificate-data/:type', getCertificatePreviewData);
+
+// =======================
+// CHILDREN MANAGEMENT
+// =======================
+
+// Get all children
+router.get('/children', getMyChildren);
+
+// Register a new child
+router.post(
+  '/children',
+  [
+    body('firstname').notEmpty().withMessage('Child firstname is required'),
+    body('lastname').notEmpty().withMessage('Child lastname is required'),
+    body('gender').isIn(['male', 'female']).withMessage('Gender must be male or female'),
+    body('birth_date').isISO8601().withMessage('Birth date must be a valid date'),
+    body('birthplace').notEmpty().withMessage('Birthplace is required'),
+  ],
+  registerChild
+);
+
+// =======================
+// DEATH REPORTS
+// =======================
+
+// Create a death report
+router.post(
+  '/death-report',
+  upload.single('evidence_document'),
+  [
+    body('deceased_person_id').isInt().withMessage('Deceased person ID is required'),
+    body('family_relationship_type').notEmpty().withMessage('Relationship type is required'),
+    body('date_of_death').isISO8601().withMessage('Death date must be a valid date'),
+    body('place_of_death').notEmpty().withMessage('Place of death is required'),
+  ],
+  createDeathReport
 );
 
 // Put generic route LAST

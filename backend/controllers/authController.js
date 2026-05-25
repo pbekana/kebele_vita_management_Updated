@@ -20,9 +20,7 @@ const generateToken = (id, role) => {
   );
 };
 
-/**
- * Handle validation errors
- */
+
 const handleValidationErrors = (req, res) => {
   const errors = validationResult(req);
 
@@ -34,9 +32,7 @@ const handleValidationErrors = (req, res) => {
   return false;
 };
 
-/**
- * Server error handler
- */
+
 const serverError = (res, err, message = 'Internal server error') => {
   logger.error(err);
   return res.status(500).json({ error: message });
@@ -316,11 +312,7 @@ const getMe = async (req, res) => {
 };
 
 
-/**
- * =========================
- * VERIFY OTP
- * =========================
- */
+
 const verifyOTP = async (req, res) => {
   if (handleValidationErrors(req, res)) return;
 
@@ -351,7 +343,6 @@ const verifyOTP = async (req, res) => {
       return res.status(400).json({ error: 'OTP has expired' });
     }
 
-    // Activate user and clear OTP
     await pool.query(
       `UPDATE users SET is_active = TRUE, otp_code = NULL, otp_expires_at = NULL WHERE id = ?`,
       [user.id]
@@ -374,11 +365,7 @@ const verifyOTP = async (req, res) => {
   }
 };
 
-/**
- * =========================
- * FORGOT PASSWORD
- * =========================
- */
+
 const forgotPassword = async (req, res) => {
   if (handleValidationErrors(req, res)) return;
 
@@ -426,11 +413,7 @@ const forgotPassword = async (req, res) => {
   }
 };
 
-/**
- * =========================
- * RESET PASSWORD
- * =========================
- */
+
 const resetPassword = async (req, res) => {
   if (handleValidationErrors(req, res)) return;
 
@@ -471,11 +454,7 @@ const resetPassword = async (req, res) => {
   }
 };
 
-/**
- * =========================
- * RESEND OTP
- * =========================
- */
+
 const resendOTP = async (req, res) => {
   const { email } = req.body;
 

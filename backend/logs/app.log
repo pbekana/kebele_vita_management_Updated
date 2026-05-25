@@ -229,3 +229,60 @@
 [2026-05-24T09:49:27.913Z] [INFO] Admin 1 assigned certificate 13 to staff 5
 [2026-05-24T09:53:19.023Z] [INFO] Staff 5 prepared certificate 13 for admin approval
 [2026-05-24T09:53:54.670Z] [INFO] Admin 1 approved certificate 13
+[2026-05-24T10:51:54.752Z] [INFO] Server running on port 5000
+[2026-05-24T10:53:52.068Z] [INFO] Server running on port 5000
+[2026-05-24T11:00:16.567Z] [INFO] Certificate request 14 created by resident 8
+[2026-05-24T11:00:50.566Z] [INFO] Admin 1 assigned certificate 14 to staff 5
+[2026-05-24T11:02:26.239Z] [INFO] Staff 5 prepared certificate 14 for admin approval
+[2026-05-24T11:03:04.176Z] [INFO] Admin 1 approved certificate 14
+[2026-05-24T11:26:28.982Z] [INFO] Server running on port 5000
+[2026-05-24T11:28:31.163Z] [INFO] Server running on port 5000
+[2026-05-24T11:36:36.009Z] [INFO] Certificate request 15 created by resident 24
+[2026-05-24T11:37:24.996Z] [INFO] Admin 1 assigned certificate 15 to staff 5
+[2026-05-24T11:38:45.730Z] [INFO] Staff 5 prepared certificate 15 for admin approval
+[2026-05-24T11:40:11.423Z] [INFO] Admin 1 approved certificate 15
+[2026-05-24T18:34:57.431Z] [INFO] Server running on port 5000
+[2026-05-24T18:44:26.272Z] [INFO] Server running on port 5000
+[2026-05-24T18:46:15.288Z] [INFO] Certificate request 16 created by resident 23
+[2026-05-24T18:46:55.968Z] [INFO] Admin 1 assigned certificate 16 to staff 5
+[2026-05-24T18:48:29.983Z] [INFO] Staff 5 prepared certificate 16 for admin approval
+[2026-05-24T18:49:09.798Z] [INFO] Admin 1 approved certificate 16
+[2026-05-24T19:03:40.364Z] [INFO] Server running on port 5000
+[2026-05-24T19:25:17.558Z] [INFO] Server running on port 5000
+[2026-05-24T19:28:06.864Z] [INFO] Certificate request 17 created by resident 22
+[2026-05-24T19:28:32.900Z] [INFO] Admin 1 assigned certificate 17 to staff 5
+[2026-05-24T19:39:35.640Z] [INFO] Staff 5 started task 8
+[2026-05-24T19:46:58.104Z] [INFO] Staff 5 prepared certificate 17 for admin approval
+[2026-05-24T19:49:04.370Z] [INFO] Admin 1 approved certificate 17
+[2026-05-25T05:24:01.190Z] [INFO] Server running on port 5000
+[2026-05-25T08:18:54.577Z] [INFO] Admin 1 assigned task 11
+[2026-05-25T08:44:31.568Z] [INFO] Server running on port 5000
+[2026-05-25T09:10:28.680Z] [INFO] Admin 1 assigned certificate 4 to staff 2
+[2026-05-25T10:26:06.484Z] [INFO] Server running on port 5000
+[2026-05-25T10:31:01.556Z] [INFO] Server running on port 5000
+[2026-05-25T10:57:55.027Z] [INFO] Server running on port 5000
+[2026-05-25T11:16:27.035Z] [INFO] Server running on port 5000
+[2026-05-25T12:05:36.094Z] [INFO] Server running on port 5000
+[2026-05-25T12:05:51.012Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:05:51.104Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:05:53.819Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:05:53.857Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:06:26.873Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:06:26.910Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:06:31.960Z] [ERROR] Error: Unknown column 'email' in 'field list'
+[2026-05-25T12:06:49.177Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:06:49.202Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:06:52.298Z] [ERROR] Error: Unknown column 'email' in 'field list'
+[2026-05-25T12:06:57.005Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:06:57.019Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:07:02.892Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:07:02.958Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:07:14.786Z] [ERROR] Error: Unknown column 'email' in 'field list'
+[2026-05-25T12:07:23.564Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:07:23.587Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:07:36.069Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:07:36.075Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:07:42.490Z] [ERROR] Error: Unknown column 'email' in 'field list'
+[2026-05-25T12:07:51.714Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:07:51.729Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T12:07:55.001Z] [ERROR] Error: Unknown column 'email' in 'field list'

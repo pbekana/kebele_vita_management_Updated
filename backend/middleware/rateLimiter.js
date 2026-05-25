@@ -1,52 +1,14 @@
-const rateLimit = require('express-rate-limit');
+// Rate limiters disabled for development and normal operations
+// Pass-through middleware that allows all requests
 
+const passThrough = (req, res, next) => {
+  next();
+};
 
-// GENERAL API LIMITER
-
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
-
-  standardHeaders: true,
-  legacyHeaders: false,
-
-  message: {
-    error: 'Too many requests. Please try again later.'
-  }
-});
-
-
-
-// AUTH LIMITER (LOGIN / REGISTER)
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-
-  standardHeaders: true,
-  legacyHeaders: false,
-
-  message: {
-    error: 'Too many login attempts. Try again after 15 minutes.'
-  }
-});
-
-
-
-// STRICT LIMITER (FOR SENSITIVE ACTIONS)
-// e.g. certificate request, ID card issuance
-
-const strictLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-
-  standardHeaders: true,
-  legacyHeaders: false,
-
-  message: {
-    error: 'Too many sensitive requests. Please slow down.'
-  }
-});
+// All limiters are now disabled
+const apiLimiter = passThrough;
+const authLimiter = passThrough;
+const strictLimiter = passThrough;
 
 
 module.exports = {

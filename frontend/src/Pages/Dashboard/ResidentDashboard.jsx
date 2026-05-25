@@ -735,38 +735,22 @@ const css = `
     font-weight: bold;
     line-height: 1.3;
   }
-  .id-card-fingerprint-box {
-    width: 100%;
-    height: 55px;
-    border: 1px dashed #78909c;
-    border-radius: 4px;
-    margin-top: 6px;
-    background-color: #fafafa;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-  .id-card-fingerprint-lbl {
-    font-size: 6.5px;
-    color: #546e7a;
-    font-weight: bold;
-    text-align: center;
-    margin-top: 1px;
-    line-height: 1.2;
-  }
   .id-card-col-personal {
     width: 70%;
   }
   .id-card-info-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
   }
   .id-card-info-table td {
     padding: 2.5px 2px;
     font-size: 9px;
     vertical-align: top;
     line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .id-card-label {
     font-weight: 800;
@@ -793,6 +777,15 @@ const css = `
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 6px 12px;
+  }
+  .id-card-row-details > div {
+    overflow: hidden;
+  }
+  .id-card-row-details .id-card-label,
+  .id-card-row-details .id-card-val {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .id-card-row-details-full {
     grid-column: span 2;
@@ -823,7 +816,7 @@ const css = `
   .id-card-stamp-box {
     width: 50px;
     height: 50px;
-    border: 1.5px dashed #f44336;
+    border: 1.5px solid #f44336;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -868,6 +861,31 @@ const css = `
     }
   }
 `;
+
+/**
+ * Strips clipboard metadata (Version:0.9, StartHTML:, EndHTML:, etc.),
+ * zero-width characters, stray HTML tags, and normalizes whitespace.
+ */
+const sanitize = (val) => {
+  if (!val || typeof val !== 'string') return val;
+  let cleaned = val;
+  // Strip zero-width characters
+  cleaned = cleaned.replace(/[\u200B-\u200D\uFEFF]/g, '');
+  // Remove Windows clipboard header lines
+  cleaned = cleaned.replace(/Version:\d[\s\S]*?StartFragment:/i, '');
+  cleaned = cleaned.replace(/EndFragment:[\s\S]*/i, '');
+  // Remove any leftover HTML tags
+  cleaned = cleaned.replace(/<[^>]*>/g, '');
+  // Normalize whitespace
+  cleaned = cleaned.replace(/\s+/g, ' ');
+  return cleaned.trim() || '';
+};
+
+/** Helper: returns empty string for null/undefined/empty, strips clipboard metadata */
+const v = (val) => {
+  if (val === null || val === undefined || val === '' || val === '-' || val === '—' || val === 'N/A' || val === 'null' || val === 'undefined') return '';
+  return sanitize(String(val));
+};
 
 const ResidentDashboard = () => {
   const [activeTab, setActiveTab] = useState('certificates');
@@ -1033,7 +1051,7 @@ const ResidentDashboard = () => {
     const isDisability = Number(userProfile.disability_status) === 1 ? "Yes / አዎ" : "No / የለም";
     
     const formatD = (dString) => {
-      if (!dString) return "—";
+      if (!dString || dString === '—' || dString === '-' || dString === 'N/A' || dString === 'null' || dString === 'undefined') return "";
       const d = new Date(dString);
       if (isNaN(d.getTime())) return dString;
       const day = String(d.getDate()).padStart(2, '0');
@@ -1057,7 +1075,7 @@ const ResidentDashboard = () => {
           <div className="id-card-header-country-am">የኢትዮጵያ ፌዴራላዊ ዴሞክራሲያዊ ሪፐብሊክ</div>
           
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, margin: '2px 0' }}>
-            <div className="id-card-stamp-box" style={{ width: 18, height: 18, fontSize: 4.5, border: '1px dashed white', color: 'white', margin: 0, padding: 0 }}>
+            <div className="id-card-stamp-box" style={{ width: 18, height: 18, fontSize: 4.5, border: '1px solid white', color: 'white', margin: 0, padding: 0 }}>
               SEAL
             </div>
             <div className="id-card-header-kebele">
@@ -1074,7 +1092,7 @@ const ResidentDashboard = () => {
         <div className="id-card-body">
           {/* PHOTO & PERSONAL INFO (Side-by-side) */}
           <div className="id-card-row-top">
-            {/* Left Col (Photo & Thumb) */}
+            {/* Left Col (Photo) */}
             <div className="id-card-col-photo">
               <div className="id-card-photo-box">
                 {photoUrl ? (
@@ -1085,12 +1103,6 @@ const ResidentDashboard = () => {
                     3x4cm Photo<br />ፎቶግራፍ
                   </div>
                 )}
-              </div>
-              <div className="id-card-fingerprint-box">
-                <span style={{ fontSize: 14, color: '#b0bec5' }}>✋</span>
-                <div className="id-card-fingerprint-lbl">
-                  Right Thumb /<br />የቀኝ አውራ ጣት
-                </div>
               </div>
             </div>
 
@@ -1104,7 +1116,7 @@ const ResidentDashboard = () => {
                   </tr>
                   <tr>
                     <td className="id-card-label">Gender / ጾታ:</td>
-                    <td className="id-card-val">{userProfile.gender || "—"}</td>
+                    <td className="id-card-val">{v(userProfile.gender)}</td>
                   </tr>
                   <tr>
                     <td className="id-card-label">Date of Birth / ልደት:</td>
@@ -1112,19 +1124,19 @@ const ResidentDashboard = () => {
                   </tr>
                   <tr>
                     <td className="id-card-label">Birthplace / ትውልድ ቦታ:</td>
-                    <td className="id-card-val">{userProfile.birthplace || "—"}</td>
+                    <td className="id-card-val">{v(userProfile.birthplace)}</td>
                   </tr>
                   <tr>
                     <td className="id-card-label">Nationality / ዜግነት:</td>
-                    <td className="id-card-val">{userProfile.nationality || "Ethiopian / ኢትዮጵያዊ"}</td>
+                    <td className="id-card-val">{v(userProfile.nationality) || "Ethiopian / ኢትዮጵያዊ"}</td>
                   </tr>
                   <tr>
                     <td className="id-card-label">Religion / ሃይማኖት:</td>
-                    <td className="id-card-val">{userProfile.religion || "—"}</td>
+                    <td className="id-card-val">{v(userProfile.religion)}</td>
                   </tr>
                   <tr>
                     <td className="id-card-label">Marital Status / ጋብቻ:</td>
-                    <td className="id-card-val" style={{ textTransform: 'capitalize' }}>{userProfile.marital_status || "—"}</td>
+                    <td className="id-card-val" style={{ textTransform: 'capitalize' }}>{v(userProfile.marital_status)}</td>
                   </tr>
                   <tr>
                     <td className="id-card-label">Disability / አካል ጉዳት:</td>
@@ -1140,16 +1152,16 @@ const ResidentDashboard = () => {
           <div className="id-card-row-details">
             <div>
               <div className="id-card-label" style={{ width: '100%' }}>Father's Name / የአባት ስም:</div>
-              <div className="id-card-val" style={{ width: '100%', fontSize: 8.5 }}>{userProfile.father_name || "—"}</div>
+              <div className="id-card-val" style={{ width: '100%', fontSize: 8.5 }}>{v(userProfile.father_name)}</div>
             </div>
             <div>
               <div className="id-card-label" style={{ width: '100%' }}>Mother's Name / የእናት ስም:</div>
-              <div className="id-card-val" style={{ width: '100%', fontSize: 8.5 }}>{userProfile.mother_name || "—"}</div>
+              <div className="id-card-val" style={{ width: '100%', fontSize: 8.5 }}>{v(userProfile.mother_name)}</div>
             </div>
             {userProfile.marital_status === "married" && (
               <div className="id-card-row-details-full">
                 <span className="id-card-label">Spouse Name / የትዳር አጋር ስም: </span>
-                <span className="id-card-val" style={{ fontSize: 8.5 }}>{userProfile.spouseName || "—"}</span>
+                <span className="id-card-val" style={{ fontSize: 8.5 }}>{v(userProfile.spouseName)}</span>
               </div>
             )}
           </div>
@@ -1159,11 +1171,11 @@ const ResidentDashboard = () => {
           <div className="id-card-row-details">
             <div>
               <div className="id-card-label" style={{ width: '100%' }}>Kebele & House No / የቤት ቁጥር:</div>
-              <div className="id-card-val" style={{ width: '100%' }}>HM - {userProfile.house_number || "—"}</div>
+              <div className="id-card-val" style={{ width: '100%' }}>HM - {v(userProfile.house_number)}</div>
             </div>
             <div>
               <div className="id-card-label" style={{ width: '100%' }}>Full Address / ሙሉ አድራሻ:</div>
-              <div className="id-card-val" style={{ width: '100%' }}>{userProfile.address || "—"}</div>
+              <div className="id-card-val" style={{ width: '100%' }}>{v(userProfile.address)}</div>
             </div>
           </div>
 
@@ -1172,20 +1184,20 @@ const ResidentDashboard = () => {
           <div className="id-card-row-details">
             <div>
               <div className="id-card-label" style={{ width: '100%' }}>Phone / ስልክ:</div>
-              <div className="id-card-val" style={{ width: '100%' }}>{userProfile.phone || "—"}</div>
+              <div className="id-card-val" style={{ width: '100%' }}>{v(userProfile.phone)}</div>
             </div>
             <div>
               <div className="id-card-label" style={{ width: '100%' }}>Occupation / ሥራ:</div>
-              <div className="id-card-val" style={{ width: '100%' }}>{userProfile.occupation || "—"}</div>
+              <div className="id-card-val" style={{ width: '100%' }}>{v(userProfile.occupation)}</div>
             </div>
             <div>
               <div className="id-card-label" style={{ width: '100%' }}>Education / ትምህርት:</div>
-              <div className="id-card-val" style={{ width: '100%' }}>{userProfile.education_level || "—"}</div>
+              <div className="id-card-val" style={{ width: '100%' }}>{v(userProfile.education_level)}</div>
             </div>
             <div>
               <div className="id-card-label" style={{ width: '100%' }}>Emergency Contact / አደጋ ጊዜ ተጠሪ:</div>
               <div className="id-card-val" style={{ width: '100%' }}>
-                {userProfile.emergency_contact_name || "—"} ({userProfile.emergency_contact_phone || "—"})
+                {v(userProfile.emergency_contact_name)} ({v(userProfile.emergency_contact_phone)})
               </div>
             </div>
           </div>

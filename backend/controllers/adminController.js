@@ -8,9 +8,7 @@ const {
   getResidentUserIdForCertificate,
 } = require('../services/certificateNotificationService');
 
-/**
- * Helper: Handle validation errors
- */
+
 const handleValidationErrors = (req, res) => {
   const errors = validationResult(req);
 
@@ -24,9 +22,7 @@ const handleValidationErrors = (req, res) => {
   return false;
 };
 
-/**
- * Helper: Generic server error response
- */
+
 const serverError = (res, err, message = 'Internal server error') => {
   logger.error(err);
   return res.status(500).json({
@@ -34,10 +30,7 @@ const serverError = (res, err, message = 'Internal server error') => {
   });
 };
 
-/**
- * POST /api/admin/users
- * Create admin or kebele staff account
- */
+
 const createUser = async (req, res) => {
   if (handleValidationErrors(req, res)) return;
 
@@ -127,9 +120,7 @@ const createUser = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/admin/users/:id/activate
- */
+
 const activateUser = async (req, res) => {
   const userId = Number(req.params.id);
 
@@ -166,9 +157,7 @@ const activateUser = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/admin/users/:id/deactivate
- */
+
 const deactivateUser = async (req, res) => {
   const userId = Number(req.params.id);
 
@@ -205,12 +194,7 @@ const deactivateUser = async (req, res) => {
   }
 };
 
-/**
- * GET /api/admin/users
- * Optional query:
- * ?role=admin
- * ?page=1&limit=10
- */
+
 const listUsers = async (req, res) => {
   try {
     const role = req.query.role || null;
@@ -262,9 +246,7 @@ const listUsers = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/admin/kebele/assign
- */
+
 const assignKebeleStaff = async (req, res) => {
   if (handleValidationErrors(req, res)) return;
 
@@ -313,10 +295,7 @@ const assignKebeleStaff = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/admin/certificates/:id/assign
- * Body: { staff_user_id: number }
- */
+
 const assignCertificate = async (req, res) => {
   const certificateId = Number(req.params.id);
   const staffUserId = Number(req.body.staff_user_id);
@@ -418,9 +397,7 @@ const assignCertificate = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/admin/certificates/:id/approve
- */
+
 const approveCertificate = async (req, res) => {
   const certificateId = Number(req.params.id);
 
@@ -705,11 +682,7 @@ const getStaffList = async (req, res) => {
   }
 };
 
-/**
- * GET /api/admin/certificates
- * Query: queue=approval|assignment|all (default approval)
- *        q, page, limit
- */
+
 const getCertificates = async (req, res) => {
   try {
     const queue = (req.query.queue || 'approval').toLowerCase();
@@ -782,10 +755,7 @@ const getCertificates = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/admin/certificates/:id/reject
- * Body: { reason: string } (required)
- */
+
 const rejectCertificate = async (req, res) => {
   const certificateId = Number(req.params.id);
 

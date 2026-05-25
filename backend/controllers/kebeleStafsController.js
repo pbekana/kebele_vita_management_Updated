@@ -82,9 +82,7 @@ async function notifyAdminsCertificateReady(certId) {
   );
 }
 
-/**
- * GET /api/staff/profile
- */
+
 const getStaffProfile = async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -276,9 +274,7 @@ const getTasksByType = async (req, res) => {
   }
 };
 
-/**
- * GET /api/staff/tasks/status/:status
- */
+
 const getTasksByStatus = async (req, res) => {
   const status = req.params.status;
 
@@ -316,10 +312,7 @@ const positionTypeMap = {
 
 const staffCertType = (position) => positionTypeMap[position] || null;
 
-/**
- * GET /api/staff/certificates
- * Assigned certificate requests for this staff member only.
- */
+
 const getCertificates = async (req, res) => {
   console.log("STAFF USER:", req.user);
   try {
@@ -401,9 +394,7 @@ const getCertificates = async (req, res) => {
   }
 };
 
-/**
- * GET /api/staff/certificates/:id
- */
+
 const getCertificateById = async (req, res) => {
   const certId = Number(req.params.id);
 
@@ -482,10 +473,7 @@ const startCertificateProcessing = async (req, res) => {
   }
 };
 
-/**
- * POST /api/staff/certificates/:id/upload-pdf
- * JSON body: { file_base64: string } (raw base64 or data URL)
- */
+
 const uploadCertificatePdf = async (req, res) => {
   const certId = Number(req.params.id);
 
@@ -569,10 +557,7 @@ const uploadCertificatePdf = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/staff/certificates/:id/ready-for-approval
- * (Legacy alias: PUT .../prepare)
- */
+
 const markCertificateReadyForApproval = async (req, res) => {
   const certId = Number(req.params.id);
 
@@ -619,10 +604,7 @@ const markCertificateReadyForApproval = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/staff/certificates/:id/prepare
- * One-step: generate PDF if needed and submit for admin approval.
- */
+
 const prepareCertificate = async (req, res) => {
   const certId = Number(req.params.id);
 
@@ -669,9 +651,7 @@ const prepareCertificate = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/staff/certificates/:id/reject
- */
+
 const rejectCertificate = async (req, res) => {
   const certId = Number(req.params.id);
 

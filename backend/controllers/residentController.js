@@ -12,9 +12,7 @@ const normalizeUploadPath = (file) => {
   return path.relative(backendRoot, file.path).replace(/\\/g, '/');
 };
 
-/**
- * Helper: Handle validation errors
- */
+
 const handleValidationErrors = (req, res) => {
   const errors = validationResult(req);
 
@@ -44,83 +42,7 @@ const serverError = (
   });
 };
 
-/**
- * Helper: Get resident by authenticated user ID
- */
-const getResident = async (userId) => {
-  const [residents] = await pool.query(
-    `SELECT
-      id,
-      user_id,
-      birth_date,
-      address,
-      phone_number
-    FROM residents
-    WHERE user_id = ?
-    LIMIT 1`,
-    [userId]
-  );
 
-  return residents[0] || null;
-};
-
-/**
- * POST /api/residents/profile
- * Create or update resident profile
- */
-// const createOrUpdateProfile = async (req, res) => {
-//   if (handleValidationErrors(req, res)) return;
-
-//   const {
-//     birth_date,
-//     address,
-//     phone_number,
-//   } = req.body;
-
-//   try {
-//     const resident = await getResident(req.user.id);
-
-//     if (!resident) {
-//       return res.status(404).json({
-//         error: 'Resident profile not found',
-//       });
-//     }
-
-//     await pool.query(
-//       `UPDATE residents
-//        SET
-//          birth_date = ?,
-//          address = ?,
-//          phone_number = ?
-//        WHERE user_id = ?`,
-//       [
-//         birth_date || null,
-//         address || null,
-//         phone_number || null,
-//         req.user.id,
-//       ]
-//     );
-
-//     const updatedResident = await getResident(req.user.id);
-
-//     logger.info(
-//       `Resident profile updated for user ${req.user.id}`
-//     );
-
-//     return res.status(200).json({
-//       message: 'Profile updated successfully',
-//       resident: updatedResident,
-//     });
-
-//   } catch (err) {
-//     return serverError(res, err);
-//   }
-// };
-
-/**
- * GET /api/residents/:id
- * Get resident by resident ID
- */
 const getResidentById = async (req, res) => {
   const residentId = Number(req.params.id);
 
@@ -700,6 +622,283 @@ const markNotificationRead = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/residents/certificate-data/:type
+ * Fetch backend-driven certificate data by type (birth, marriage, death, residency-id)
+ */
+const getCertificatePreviewData = async (req, res) => {
+  const { type } = req.params;
+  const allowedTypes = ['birth', 'marriage', 'death', 'residency-id', 'residency'];
+
+  if (!allowedTypes.includes(type)) {
+    return res.status(400).json({
+      error: 'Invalid certificate type',
+    });
+  }
+
+  try {
+    const [residentRows] = await pool.query(
+      `SELECT id, firstname, lastname, gender, birth_date, birthplace, 
+              phone_number, email, marital_status, spouse_id
+       FROM residents
+       WHERE user_id = ?
+       LIMIT 1`,
+      [req.user.id]
+    );
+
+    if (residentRows.length === 0) {
+      return res.status(404).json({
+        error: 'Resident profile not found',
+      });
+    }
+
+    const resident = residentRows[0];
+    const data = {
+      resident: resident,
+      certificateType: type,
+      children: [],
+      spouseData: null,
+      deathReports: [],
+    };
+
+    // Birth Certificate Data
+    if (type === 'birth') {
+      const [children] = await pool.query(
+        `SELECT id, firstname, lastname, gender, birth_date, birthplace
+         FROM children
+         WHERE father_id = ? OR mother_id = ?
+         ORDER BY birth_date DESC`,
+        [resident.id, resident.id]
+      );
+      data.children = children;
+    }
+
+    // Marriage Certificate Data
+    if (type === 'marriage') {
+      if (resident.spouse_id) {
+        const [spouse] = await pool.query(
+          `SELECT id, firstname, lastname, gender, birth_date, birthplace, phone_number
+           FROM residents
+           WHERE id = ?
+           LIMIT 1`,
+          [resident.spouse_id]
+        );
+        if (spouse.length > 0) {
+          data.spouseData = spouse[0];
+        }
+      }
+
+      // Also check marriage_relationships table
+      const [marriages] = await pool.query(
+        `SELECT * FROM marriage_relationships
+         WHERE (husband_id = ? OR wife_id = ?)
+         AND status = 'active'
+         LIMIT 1`,
+        [resident.id, resident.id]
+      );
+      if (marriages.length > 0) {
+        data.marriageRelationship = marriages[0];
+      }
+    }
+
+    // Death Certificate Data
+    if (type === 'death') {
+      const [deaths] = await pool.query(
+        `SELECT * FROM death_reports
+         WHERE reporter_id = ?
+         AND status != 'rejected'
+         ORDER BY created_at DESC
+         LIMIT 10`,
+        [resident.id]
+      );
+      data.deathReports = deaths;
+
+      // Also fetch deceased person details if available
+      if (deaths.length > 0) {
+        const deceasedIds = deaths.map(d => d.deceased_person_id);
+        const [deceasedPeople] = await pool.query(
+          `SELECT id, firstname, lastname, gender, birth_date, birthplace
+           FROM residents
+           WHERE id IN (${deceasedIds.map(() => '?').join(',')})`,
+          deceasedIds
+        );
+        data.deceasedPeople = deceasedPeople;
+      }
+    }
+
+    // Residency ID Data (uses resident info mainly)
+    if (type === 'residency-id' || type === 'residency') {
+      // Just use resident data already fetched
+      data.residencyInfo = {
+        fullName: `${resident.firstname} ${resident.lastname}`,
+        phone: resident.phone_number,
+      };
+    }
+
+    return res.status(200).json(data);
+
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
+/**
+ * POST /api/residents/death-report
+ * Create a death report
+ */
+const createDeathReport = async (req, res) => {
+  if (handleValidationErrors(req, res)) return;
+
+  const {
+    deceased_person_id,
+    family_relationship_type,
+    date_of_death,
+    cause_of_death,
+    place_of_death,
+  } = req.body;
+
+  const evidenceDocPath = normalizeUploadPath(req.files?.evidence_document?.[0]);
+
+  try {
+    const [residentRows] = await pool.query(
+      `SELECT id FROM residents WHERE user_id = ? LIMIT 1`,
+      [req.user.id]
+    );
+
+    if (residentRows.length === 0) {
+      return res.status(404).json({
+        error: 'Resident profile not found',
+      });
+    }
+
+    const reporterId = residentRows[0].id;
+
+    // Verify family relationship exists
+    const [familyCheck] = await pool.query(
+      `SELECT 1 FROM family_relationships
+       WHERE (resident_id = ? AND family_member_id = ?)
+          OR (resident_id = ? AND family_member_id = ?)
+       LIMIT 1`,
+      [reporterId, deceased_person_id, deceased_person_id, reporterId]
+    );
+
+    if (familyCheck.length === 0) {
+      return res.status(403).json({
+        error: 'Only family members can file death reports',
+      });
+    }
+
+    const [result] = await pool.query(
+      `INSERT INTO death_reports
+       (deceased_person_id, reporter_id, family_relationship_type, date_of_death, cause_of_death, place_of_death, evidence_document, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [deceased_person_id, reporterId, family_relationship_type, date_of_death, cause_of_death, place_of_death, evidenceDocPath]
+    );
+
+    logger.info(`Death report ${result.insertId} created by resident ${reporterId}`);
+
+    return res.status(201).json({
+      message: 'Death report submitted successfully',
+      report_id: result.insertId,
+    });
+
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
+/**
+ * GET /api/residents/children
+ * Get all children associated with resident (as parent)
+ */
+const getMyChildren = async (req, res) => {
+  try {
+    const [residentRows] = await pool.query(
+      `SELECT id FROM residents WHERE user_id = ? LIMIT 1`,
+      [req.user.id]
+    );
+
+    if (residentRows.length === 0) {
+      return res.status(404).json({
+        error: 'Resident profile not found',
+      });
+    }
+
+    const residentId = residentRows[0].id;
+
+    const [children] = await pool.query(
+      `SELECT * FROM children
+       WHERE father_id = ? OR mother_id = ?
+       ORDER BY birth_date DESC`,
+      [residentId, residentId]
+    );
+
+    return res.status(200).json({
+      count: children.length,
+      children,
+    });
+
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
+/**
+ * POST /api/residents/children
+ * Register a new child
+ */
+const registerChild = async (req, res) => {
+  if (handleValidationErrors(req, res)) return;
+
+  const {
+    firstname,
+    lastname,
+    gender,
+    birth_date,
+    birthplace,
+    father_id,
+    mother_id,
+  } = req.body;
+
+  try {
+    const [residentRows] = await pool.query(
+      `SELECT id FROM residents WHERE user_id = ? LIMIT 1`,
+      [req.user.id]
+    );
+
+    if (residentRows.length === 0) {
+      return res.status(404).json({
+        error: 'Resident profile not found',
+      });
+    }
+
+    const currentResidentId = residentRows[0].id;
+
+    // Verify that current resident is one of the parents
+    if (father_id !== currentResidentId && mother_id !== currentResidentId) {
+      return res.status(403).json({
+        error: 'Child registration failed: Current resident must be one of the parents',
+      });
+    }
+
+    const [result] = await pool.query(
+      `INSERT INTO children (firstname, lastname, gender, birth_date, birthplace, father_id, mother_id, is_alive)
+       VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)`,
+      [firstname, lastname, gender, birth_date, birthplace, father_id || null, mother_id || null]
+    );
+
+    logger.info(`Child ${result.insertId} registered by resident ${currentResidentId}`);
+
+    return res.status(201).json({
+      message: 'Child registered successfully',
+      child_id: result.insertId,
+    });
+
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
 module.exports = {
   getResidentById,
   requestCertificate,
@@ -710,4 +909,8 @@ module.exports = {
   getProfile,
   listMyNotifications,
   markNotificationRead,
+  getCertificatePreviewData,
+  createDeathReport,
+  getMyChildren,
+  registerChild,
 };

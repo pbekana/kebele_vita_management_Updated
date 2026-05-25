@@ -1,5 +1,7 @@
 const { pool } = require('./connectDB');
 const { applyCertificateWorkflowMigration } = require('./applyCertificateWorkflowMigration');
+const { createDeathReportTable } = require('./addDeathReportTableMigration');
+const { createMarriageRelationshipTable } = require('./addMarriageRelationshipMigration');
 
 const initDB = async () => {
   try {
@@ -311,6 +313,12 @@ const initDB = async () => {
 `);
 
     await applyCertificateWorkflowMigration(pool);
+    
+    // Create death reports table
+    await createDeathReportTable();
+    
+    // Create marriage relationships table
+    await createMarriageRelationshipTable();
 
     console.log('MySQL tables initialized successfully.');
 
