@@ -10,25 +10,19 @@ const ApplyCertificate = () => {
 
   const [applicationFor, setApplicationFor] = useState('');
   const [formData, setFormData] = useState({
-    childName: "", motherName: "", fatherName: "", fullName: "",
-    birthDate: "", birthPlace: "",
-    childPhoto: null,
-
-    husbandName: "", wifeName: "", marriageDate: "", marriagePlace: "", witnessName: "",
-    husbandBirthDate: "", husbandBirthPlace: "", wifeBirthDate: "", wifeBirthPlace: "",
-    husbandPhoto: null,
-    wifePhoto: null,
-
-    deceasedName: "", deathDate: "", causeOfDeath: "", deathPlace: "",
-    deceasedPhoto: null,
-
     existingIdNumber: "",
     applicantPhoto: null,
-
     phone: "",
     additionalInfo: "",
     documents: []
   });
+
+  const [regData, setRegData] = useState({
+    firstname: '', lastname: '', gender: 'male', birth_date: '', birthplace: '',
+    spouse_id: '', marriage_date: '', marriage_place: '',
+    deceased_person_id: '', family_relationship_type: '', date_of_death: '', cause_of_death: '', place_of_death: ''
+  });
+  const [regFile, setRegFile] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const { notifySuccess, notifyError } = useNotification();
@@ -42,24 +36,22 @@ const ApplyCertificate = () => {
     return dateString.split('T')[0];
   };
 
-  // Fetch backend-driven certificate data
+  const fetchCertificateData = async () => {
+    if (!applicationFor || !type) return;
+    try {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const response = await axios.get(
+        `http://localhost:5000/api/residents/certificate-data/${type}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setBackendData(response.data);
+    } catch (error) {
+      console.error("Failed to fetch certificate data:", error);
+      notifyError("Failed to load certificate data from backend");
+    }
+  };
+
   useEffect(() => {
-    const fetchCertificateData = async () => {
-      if (!applicationFor || !type) return;
-
-      try {
-        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-        const response = await axios.get(
-          `http://localhost:5000/api/residents/certificate-data/${type}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setBackendData(response.data);
-      } catch (error) {
-        console.error("Failed to fetch certificate data:", error);
-        notifyError("Failed to load certificate data from backend");
-      }
-    };
-
     fetchCertificateData();
   }, [applicationFor, type]);
 
@@ -73,6 +65,11 @@ const ApplyCertificate = () => {
   const config = configs[type] || configs.birth;
   const isBirth = type === 'birth';
   const isResidency = type === 'residency-id' || type === 'residency';
+
+  const needsChildRegistration = type === 'birth' && applicationFor === 'child' && (!backendData?.children || backendData.children.length === 0);
+  const needsMarriageRegistration = type === 'marriage' && !backendData?.marriageRelationship;
+  const needsDeathRegistration = type === 'death' && (!backendData?.deathReports || backendData.deathReports.length === 0);
+  const needsEntityRegistration = needsChildRegistration || needsMarriageRegistration || needsDeathRegistration;
 
   const getPreviewData = () => {
     const previewFields = [];
@@ -166,6 +163,10 @@ const ApplyCertificate = () => {
 
   const previewData = getPreviewData();
 
+  const handleRegChange = (e) => {
+    setRegData({ ...regData, [e.target.name]: e.target.value });
+  };
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -196,34 +197,80 @@ const ApplyCertificate = () => {
     }));
   };
 
-  const renderMissingInput = (field) => {
-    const inputType = field.key.toLowerCase().includes('date') ? 'date' : 'text';
-    return (
-      <div key={field.key}>
-        <label className="block text-sm font-medium mb-2">{field.label}</label>
-        <input
-          type={inputType}
-          name={field.key}
-          value={formData[field.key] || ''}
-          onChange={handleChange}
-          required={field.required}
-          placeholder={field.label}
-          className="w-full p-4 border rounded-2xl"
-        />
-      </div>
-    );
+  const handleRegistrationSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+
+    try {
+      if (needsChildRegistration) {
+        const payload = new FormData();
+        payload.append('firstname', regData.firstname);
+        payload.append('lastname', regData.lastname);
+        payload.append('gender', regData.gender);
+        payload.append('birth_date', regData.birth_date);
+        payload.append('birthplace', regData.birthplace);
+        if (backendData?.resident?.gender === 'male') {
+          payload.append('father_id', backendData.resident.id);
+        } else {
+          payload.append('mother_id', backendData.resident.id);
+        }
+        if (regFile) payload.append('hospitalEvidence', regFile);
+
+        await axios.post('http://localhost:5000/api/residents/children', payload, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
+        });
+        notifySuccess("Child registered successfully. Loading preview...");
+      } else if (needsMarriageRegistration) {
+        await axios.post('http://localhost:5000/api/residents/marriage-relationships', {
+          spouse_id: regData.spouse_id,
+          marriage_date: regData.marriage_date,
+          marriage_place: regData.marriage_place
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        notifySuccess("Marriage relationship created. Loading preview...");
+      } else if (needsDeathRegistration) {
+        const payload = new FormData();
+        payload.append('deceased_person_id', regData.deceased_person_id);
+        payload.append('family_relationship_type', regData.family_relationship_type);
+        payload.append('date_of_death', regData.date_of_death);
+        payload.append('cause_of_death', regData.cause_of_death);
+        payload.append('place_of_death', regData.place_of_death);
+        if (regFile) payload.append('evidence_document', regFile);
+
+        await axios.post('http://localhost:5000/api/residents/death-report', payload, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
+        });
+        notifySuccess("Death reported successfully. Loading preview...");
+      }
+      
+      await fetchCertificateData(); // reload the data so preview shows up
+    } catch (err) {
+      notifyError(`Registration failed: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (needsEntityRegistration) return; // Prevent certificate submission if prerequisite is missing
+
     setLoading(true);
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       const payload = new FormData();
       payload.append('certificate_type', type);
 
+      // Pre-fill backend verified entity IDs if applicable
+      if (type === 'death' && selectedDeceasedId) {
+        const report = backendData.deathReports.find(d => d.id === selectedDeceasedId);
+        if (report) payload.append('deceased_resident_id', report.deceased_person_id);
+      }
+
       Object.entries(formData).forEach(([key, value]) => {
-        if (value === null || value === undefined) return;
+        if (value === null || value === undefined || value === "") return;
         if (value instanceof File) {
           payload.append(key, value);
           return;
@@ -338,13 +385,55 @@ const ApplyCertificate = () => {
             )}
           </div>
 
-          <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          <div className="p-8">
             {!backendData ? (
               <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-700">
                 Loading certificate data...
               </div>
+            ) : needsEntityRegistration ? (
+              <form onSubmit={handleRegistrationSubmit} className="space-y-6">
+                <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6">
+                  <h3 className="text-lg font-semibold mb-2">Registration Required</h3>
+                  <p className="text-sm text-slate-700 mb-6">
+                    Before applying for a certificate, you must register the corresponding details in the database.
+                  </p>
+                  
+                  {needsChildRegistration && (
+                    <div className="grid gap-4">
+                      <div><label className="block text-sm font-medium mb-1">Child First Name</label><input type="text" name="firstname" value={regData.firstname} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                      <div><label className="block text-sm font-medium mb-1">Child Last Name</label><input type="text" name="lastname" value={regData.lastname} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                      <div><label className="block text-sm font-medium mb-1">Gender</label><select name="gender" value={regData.gender} onChange={handleRegChange} className="w-full p-3 border rounded-xl"><option value="male">Male</option><option value="female">Female</option></select></div>
+                      <div><label className="block text-sm font-medium mb-1">Date of Birth</label><input type="date" name="birth_date" value={regData.birth_date} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                      <div><label className="block text-sm font-medium mb-1">Place of Birth</label><input type="text" name="birthplace" value={regData.birthplace} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                      <div><label className="block text-sm font-medium mb-1">Hospital Evidence</label><input type="file" accept="image/*,.pdf" onChange={(e) => setRegFile(e.target.files[0])} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-rose-100 file:text-rose-700" /></div>
+                    </div>
+                  )}
+
+                  {needsMarriageRegistration && (
+                    <div className="grid gap-4">
+                      <div><label className="block text-sm font-medium mb-1">Spouse Resident ID</label><input type="number" name="spouse_id" value={regData.spouse_id} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                      <div><label className="block text-sm font-medium mb-1">Marriage Date</label><input type="date" name="marriage_date" value={regData.marriage_date} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                      <div><label className="block text-sm font-medium mb-1">Marriage Place</label><input type="text" name="marriage_place" value={regData.marriage_place} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                    </div>
+                  )}
+
+                  {needsDeathRegistration && (
+                    <div className="grid gap-4">
+                      <div><label className="block text-sm font-medium mb-1">Deceased Person Resident ID</label><input type="number" name="deceased_person_id" value={regData.deceased_person_id} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                      <div><label className="block text-sm font-medium mb-1">Your Relationship to Deceased</label><input type="text" name="family_relationship_type" value={regData.family_relationship_type} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                      <div><label className="block text-sm font-medium mb-1">Date of Death</label><input type="date" name="date_of_death" value={regData.date_of_death} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                      <div><label className="block text-sm font-medium mb-1">Cause of Death</label><input type="text" name="cause_of_death" value={regData.cause_of_death} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                      <div><label className="block text-sm font-medium mb-1">Place of Death</label><input type="text" name="place_of_death" value={regData.place_of_death} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                      <div><label className="block text-sm font-medium mb-1">Evidence Document</label><input type="file" accept="image/*,.pdf" onChange={(e) => setRegFile(e.target.files[0])} required className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-rose-100 file:text-rose-700" /></div>
+                    </div>
+                  )}
+                </div>
+                <button type="submit" disabled={loading} className="w-full bg-rose-600 hover:bg-rose-700 text-white py-4 rounded-2xl font-semibold text-lg transition">
+                  {loading ? 'Submitting Registration...' : 'Register Details'}
+                </button>
+              </form>
             ) : (
-              <>
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
                   <div className="space-y-6">
                     <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
@@ -418,7 +507,7 @@ const ApplyCertificate = () => {
                       </h2>
                       <p className="text-sm text-slate-700">
                         {previewData.hasMissing
-                          ? 'Fill in the missing fields below to complete your request.'
+                          ? 'Please fill in any remaining missing fields or uploads.'
                           : 'Your certificate preview is complete. Confirm and apply to submit.'}
                       </p>
                     </div>
@@ -448,9 +537,25 @@ const ApplyCertificate = () => {
 
                 {previewData.hasMissing && (
                   <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6">
-                    <h3 className="text-lg font-semibold mb-4">Provide missing certificate details</h3>
+                    <h3 className="text-lg font-semibold mb-4">Provide additional details</h3>
                     <div className="grid gap-4">
-                      {previewData.missingFields.map(renderMissingInput)}
+                      {previewData.missingFields.map(field => {
+                        const inputType = field.key.toLowerCase().includes('date') ? 'date' : 'text';
+                        return (
+                          <div key={field.key}>
+                            <label className="block text-sm font-medium mb-2">{field.label}</label>
+                            <input
+                              type={inputType}
+                              name={field.key}
+                              value={formData[field.key] || ''}
+                              onChange={handleChange}
+                              required={field.required}
+                              placeholder={field.label}
+                              className="w-full p-4 border rounded-2xl"
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -493,9 +598,9 @@ const ApplyCertificate = () => {
                 <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-semibold text-lg transition">
                   {loading ? 'Submitting...' : 'Confirm and Apply'}
                 </button>
-              </>
+              </form>
             )}
-          </form>
+          </div>
         </div>
       </div>
     </div>

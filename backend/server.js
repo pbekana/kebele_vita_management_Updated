@@ -5,7 +5,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const { connectDB } = require('./config/connectDB');
 const initDB = require('./config/initDB');
-const { apiLimiter } = require('./middleware/rateLimiter');
 const logger = require('./utils/logger');
 
 const app = express();
@@ -14,8 +13,7 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json({ limit: '20mb' }));app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-// ── Global rate limiter ──────────────────────────────────
-app.use('/api/', apiLimiter);
+// ── Global rate limiter removed ──────────────────────────────────
 
 // ── Routes ───────────────────────────────────────────────
 app.use('/api/auth',      require('./routes/auth'));

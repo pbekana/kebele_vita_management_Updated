@@ -13,7 +13,6 @@ const {
 } = require('../controllers/authController');
 
 const { protect } = require('../middleware/authMiddleware');
-const { authLimiter } = require('../middleware/rateLimiter');
 
 
 /**
@@ -24,7 +23,6 @@ const { authLimiter } = require('../middleware/rateLimiter');
  */
 router.post(
   '/register',
-  authLimiter,
   [
     body('email')
       .isEmail()
@@ -45,7 +43,6 @@ router.post(
  */
 router.post(
   '/verify-otp',
-  authLimiter,
   [
     body('email').isEmail().withMessage('Valid email required'),
     body('otp').notEmpty().withMessage('OTP is required')
@@ -61,7 +58,6 @@ router.post(
  */
 router.post(
   '/resend-otp',
-  authLimiter,
   [
     body('email').isEmail().withMessage('Valid email required')
   ],
@@ -76,7 +72,6 @@ router.post(
  */
 router.post(
   '/forgot-password',
-  authLimiter,
   [
     body('identifier').notEmpty().withMessage('Email or phone number is required')
   ],
@@ -91,7 +86,6 @@ router.post(
  */
 router.post(
   '/reset-password',
-  authLimiter,
   [
     body('email').isEmail().withMessage('Valid email required'),
     body('otp').notEmpty().withMessage('Reset code is required'),
@@ -108,7 +102,6 @@ router.post(
  */
 router.post(
   '/login',
-  authLimiter,
   [
     body('email')
       .isEmail()

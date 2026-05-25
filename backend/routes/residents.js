@@ -103,6 +103,8 @@ const {
   createDeathReport,
   getMyChildren,
   registerChild,
+  createMarriageRelationship,
+  getMarriageRelationships,
 } = require('../controllers/residentController');
 
 const CERT_IMAGE_UPLOAD_DIR = path.join(__dirname, '..', 'uploads', 'certificates', 'images');
@@ -221,6 +223,7 @@ router.get('/children', getMyChildren);
 // Register a new child
 router.post(
   '/children',
+  upload.single('hospitalEvidence'),
   [
     body('firstname').notEmpty().withMessage('Child firstname is required'),
     body('lastname').notEmpty().withMessage('Child lastname is required'),
@@ -229,6 +232,22 @@ router.post(
     body('birthplace').notEmpty().withMessage('Birthplace is required'),
   ],
   registerChild
+);
+
+// =======================
+// MARRIAGE RELATIONSHIPS
+// =======================
+
+router.get('/marriage-relationships', getMarriageRelationships);
+
+router.post(
+  '/marriage-relationships',
+  [
+    body('spouse_id').isInt().withMessage('Spouse ID is required'),
+    body('marriage_date').isISO8601().withMessage('Marriage date must be a valid date'),
+    body('marriage_place').notEmpty().withMessage('Marriage place is required'),
+  ],
+  createMarriageRelationship
 );
 
 // =======================

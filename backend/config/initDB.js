@@ -70,6 +70,29 @@ const initDB = async () => {
       
       )
     `)
+
+    // Fathers table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS fathers (
+        father_id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NULL,
+        personal_details TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+
+    // Mothers table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS mothers (
+        mother_id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NULL,
+        personal_details TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+
     //children tables
     await pool.query(
       `CREATE TABLE IF NOT EXISTS children (
@@ -85,7 +108,7 @@ const initDB = async () => {
 
     birth_date DATE NOT NULL,
     birthplace VARCHAR(255),
-
+    hospital_evidence VARCHAR(500) NULL,
     is_alive BOOLEAN DEFAULT TRUE,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

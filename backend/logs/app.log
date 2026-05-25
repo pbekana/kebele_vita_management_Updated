@@ -286,3 +286,29 @@
 [2026-05-25T12:07:51.714Z] [ERROR] ReferenceError: getResident is not defined
 [2026-05-25T12:07:51.729Z] [ERROR] ReferenceError: getResident is not defined
 [2026-05-25T12:07:55.001Z] [ERROR] Error: Unknown column 'email' in 'field list'
+[2026-05-25T13:23:55.237Z] [INFO] Server running on port 5000
+[2026-05-25T13:24:16.164Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:24:16.246Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:24:26.909Z] [ERROR] Error: Unknown column 'email' in 'field list'
+[2026-05-25T13:24:31.321Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:24:31.336Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:34:03.690Z] [INFO] Server running on port 5000
+[2026-05-25T13:34:21.858Z] [ERROR] Error: Unknown column 'email' in 'field list'
+[2026-05-25T13:34:24.970Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:34:24.996Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:35:05.183Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:35:05.209Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:35:09.388Z] [ERROR] Error: Unknown column 'email' in 'field list'
+[2026-05-25T13:36:21.398Z] [INFO] Server running on port 5000
+[2026-05-25T13:37:21.942Z] [INFO] Server running on port 5000
+[2026-05-25T13:37:30.127Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:37:30.148Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:37:32.662Z] [ERROR] Error: Unknown column 'email' in 'field list'
+[2026-05-25T13:38:04.391Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:38:04.402Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:38:20.630Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:38:20.658Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:38:25.879Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:38:25.903Z] [ERROR] ReferenceError: getResident is not defined
+[2026-05-25T13:38:28.891Z] [ERROR] Error: Unknown column 'email' in 'field list'
+[2026-05-25T13:45:32.849Z] [INFO] Server running on port 5000

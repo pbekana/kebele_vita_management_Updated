@@ -42,6 +42,10 @@ const serverError = (
   });
 };
 
+const getResident = async (userId) => {
+  const [rows] = await pool.query('SELECT * FROM residents WHERE user_id = ? LIMIT 1', [userId]);
+  return rows[0] || null;
+};
 
 const getResidentById = async (req, res) => {
   const residentId = Number(req.params.id);
@@ -638,10 +642,11 @@ const getCertificatePreviewData = async (req, res) => {
 
   try {
     const [residentRows] = await pool.query(
-      `SELECT id, firstname, lastname, gender, birth_date, birthplace, 
-              phone_number, email, marital_status, spouse_id
-       FROM residents
-       WHERE user_id = ?
+      `SELECT r.id, r.firstname, r.lastname, r.gender, r.birth_date, r.birthplace, 
+              r.phone_number, u.email, r.marital_status, r.spouse_id
+       FROM residents r
+       JOIN users u ON u.id = r.user_id
+       WHERE r.user_id = ?
        LIMIT 1`,
       [req.user.id]
     );
@@ -860,6 +865,8 @@ const registerChild = async (req, res) => {
     mother_id,
   } = req.body;
 
+  const hospitalEvidencePath = normalizeUploadPath(req.file);
+
   try {
     const [residentRows] = await pool.query(
       `SELECT id FROM residents WHERE user_id = ? LIMIT 1`,
@@ -874,17 +881,20 @@ const registerChild = async (req, res) => {
 
     const currentResidentId = residentRows[0].id;
 
+    const parsedFatherId = father_id ? Number(father_id) : null;
+    const parsedMotherId = mother_id ? Number(mother_id) : null;
+
     // Verify that current resident is one of the parents
-    if (father_id !== currentResidentId && mother_id !== currentResidentId) {
+    if (parsedFatherId !== currentResidentId && parsedMotherId !== currentResidentId) {
       return res.status(403).json({
         error: 'Child registration failed: Current resident must be one of the parents',
       });
     }
 
     const [result] = await pool.query(
-      `INSERT INTO children (firstname, lastname, gender, birth_date, birthplace, father_id, mother_id, is_alive)
-       VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)`,
-      [firstname, lastname, gender, birth_date, birthplace, father_id || null, mother_id || null]
+      `INSERT INTO children (firstname, lastname, gender, birth_date, birthplace, father_id, mother_id, hospital_evidence, is_alive)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,
+      [firstname, lastname, gender, birth_date, birthplace, parsedFatherId, parsedMotherId, hospitalEvidencePath]
     );
 
     logger.info(`Child ${result.insertId} registered by resident ${currentResidentId}`);
@@ -892,6 +902,83 @@ const registerChild = async (req, res) => {
     return res.status(201).json({
       message: 'Child registered successfully',
       child_id: result.insertId,
+    });
+
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
+/**
+ * POST /api/residents/marriage-relationships
+ * Create a new marriage relationship
+ */
+const createMarriageRelationship = async (req, res) => {
+  if (handleValidationErrors(req, res)) return;
+
+  const { spouse_id, marriage_date, marriage_place } = req.body;
+
+  try {
+    const [residentRows] = await pool.query(
+      `SELECT id, gender FROM residents WHERE user_id = ? LIMIT 1`,
+      [req.user.id]
+    );
+
+    if (residentRows.length === 0) {
+      return res.status(404).json({ error: 'Resident profile not found' });
+    }
+
+    const currentResident = residentRows[0];
+    const husband_id = currentResident.gender === 'male' ? currentResident.id : spouse_id;
+    const wife_id = currentResident.gender === 'female' ? currentResident.id : spouse_id;
+
+    const [result] = await pool.query(
+      `INSERT INTO marriage_relationships (husband_id, wife_id, marriage_date, marriage_place, status)
+       VALUES (?, ?, ?, ?, 'active')`,
+      [husband_id, wife_id, marriage_date, marriage_place]
+    );
+
+    logger.info(`Marriage relationship ${result.insertId} created by resident ${currentResident.id}`);
+
+    return res.status(201).json({
+      message: 'Marriage relationship created successfully',
+      relationship_id: result.insertId,
+    });
+
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: 'A marriage relationship already exists between these residents.' });
+    }
+    return serverError(res, err);
+  }
+};
+
+/**
+ * GET /api/residents/marriage-relationships
+ * Get all marriage relationships for resident
+ */
+const getMarriageRelationships = async (req, res) => {
+  try {
+    const [residentRows] = await pool.query(
+      `SELECT id FROM residents WHERE user_id = ? LIMIT 1`,
+      [req.user.id]
+    );
+
+    if (residentRows.length === 0) {
+      return res.status(404).json({ error: 'Resident profile not found' });
+    }
+
+    const residentId = residentRows[0].id;
+
+    const [relationships] = await pool.query(
+      `SELECT * FROM marriage_relationships
+       WHERE husband_id = ? OR wife_id = ?`,
+      [residentId, residentId]
+    );
+
+    return res.status(200).json({
+      count: relationships.length,
+      relationships,
     });
 
   } catch (err) {
@@ -913,4 +1000,6 @@ module.exports = {
   createDeathReport,
   getMyChildren,
   registerChild,
+  createMarriageRelationship,
+  getMarriageRelationships,
 };
