@@ -206,9 +206,16 @@ const listUsers = async (req, res) => {
 
     let query = `
       SELECT 
-        u.id,
+        u.id AS user_id,
+        r.id AS resident_id,
         r.firstname,
         r.lastname,
+        r.gender,
+        r.phone_number,
+        r.occupation,
+        r.marital_status,
+        r.address,
+        r.registration_date,
         u.email,
         u.role,
         u.is_active,
@@ -217,11 +224,16 @@ const listUsers = async (req, res) => {
       LEFT JOIN residents r ON r.user_id = u.id
     `;
 
+    let countQuery = `SELECT COUNT(*) as total FROM users u`;
+
     const params = [];
+    const countParams = [];
 
     if (role) {
       query += ' WHERE u.role = ?';
+      countQuery += ' WHERE u.role = ?';
       params.push(role);
+      countParams.push(role);
     }
 
     query += `
@@ -233,10 +245,13 @@ const listUsers = async (req, res) => {
     params.push(limit, offset);
 
     const [users] = await pool.query(query, params);
+    const [countRows] = await pool.query(countQuery, countParams);
+    const total = countRows[0].total;
 
     return res.status(200).json({
       page,
       limit,
+      total,
       count: users.length,
       users,
     });

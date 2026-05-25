@@ -312,3 +312,21 @@
 [2026-05-25T13:38:25.903Z] [ERROR] ReferenceError: getResident is not defined
 [2026-05-25T13:38:28.891Z] [ERROR] Error: Unknown column 'email' in 'field list'
 [2026-05-25T13:45:32.849Z] [INFO] Server running on port 5000
+[2026-05-25T16:39:09.489Z] [INFO] Server running on port 5000
+[2026-05-25T16:42:08.445Z] [INFO] Registration OTP email sent to: bekanapeter@gmail.com
+[2026-05-25T16:42:08.573Z] [INFO] Resident registered, awaiting OTP verification: bekanapeter@gmail.com
+[2026-05-25T16:42:37.713Z] [INFO] User verified OTP successfully: bekanapeter@gmail.com
+[2026-05-25T17:33:00.696Z] [INFO] Server running on port 5000
+[2026-05-25T17:33:14.112Z] [ERROR] Error: Unknown column 'fr.family_member_id' in 'on clause'
+[2026-05-25T17:33:14.130Z] [ERROR] Error: Unknown column 'fr.family_member_id' in 'on clause'
+[2026-05-25T17:33:19.529Z] [ERROR] Error: Unknown column 'fr.family_member_id' in 'on clause'
+[2026-05-25T17:33:19.590Z] [ERROR] Error: Unknown column 'fr.family_member_id' in 'on clause'
+[2026-05-25T17:33:51.826Z] [ERROR] Error: Unknown column 'fr.family_member_id' in 'on clause'
+[2026-05-25T17:33:51.844Z] [ERROR] Error: Unknown column 'fr.family_member_id' in 'on clause'
+[2026-05-25T17:33:58.819Z] [ERROR] Error: Unknown column 'fr.family_member_id' in 'on clause'
+[2026-05-25T17:33:58.840Z] [ERROR] Error: Unknown column 'fr.family_member_id' in 'on clause'
+[2026-05-25T17:34:15.754Z] [ERROR] Error: Unknown column 'fr.family_member_id' in 'on clause'
+[2026-05-25T17:34:15.768Z] [ERROR] Error: Unknown column 'fr.family_member_id' in 'on clause'
+[2026-05-25T17:34:33.021Z] [ERROR] Error: Unknown column 'fr.family_member_id' in 'on clause'
+[2026-05-25T17:34:33.030Z] [ERROR] Error: Unknown column 'fr.family_member_id' in 'on clause'
+[2026-05-25T17:39:11.024Z] [INFO] Server running on port 5000

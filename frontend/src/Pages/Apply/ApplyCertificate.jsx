@@ -24,6 +24,9 @@ const ApplyCertificate = () => {
   });
   const [regFile, setRegFile] = useState(null);
 
+  const [showChildForm, setShowChildForm] = useState(false);
+  const [showMarriageForm, setShowMarriageForm] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const { notifySuccess, notifyError } = useNotification();
 
@@ -119,18 +122,29 @@ const ApplyCertificate = () => {
       addField({ label: 'Place of Birth', key: 'birthPlace', value: backendData?.resident?.birthplace || '', required: true });
       addField({ label: 'Contact Phone', key: 'phone', value: backendData?.resident?.phone_number || '', required: true });
       uploadFields.push({ name: 'applicantPhoto', label: 'Applicant Photo', required: true, description: 'Upload a photo for the certificate.' });
-    } else if (type === 'marriage' && backendData?.spouseData) {
-      const resident = backendData.resident;
-      const spouse = backendData.spouseData;
-      const marriage = backendData.marriageRelationship;
+    } else if (type === 'marriage' && (backendData?.spouseData || backendData?.marriageRelationship)) {
+      const resident  = backendData.resident;
+      const spouse    = backendData.spouseData;
+      const marriage  = backendData.marriageRelationship;
 
-      addField({ label: resident?.gender === 'male' ? 'Husband Name' : 'Wife Name', key: 'husbandName', value: `${resident.firstname} ${resident.lastname}`, required: false });
-      addField({ label: resident?.gender === 'male' ? 'Wife Name' : 'Husband Name', key: 'wifeName', value: `${spouse.firstname} ${spouse.lastname}`, required: false });
-      addField({ label: 'Marriage Date', key: 'marriageDate', value: formatDate(marriage?.marriage_date), required: false });
-      addField({ label: 'Marriage Place', key: 'marriagePlace', value: marriage?.marriage_place || '', required: false });
+      const residentFull = resident ? `${resident.firstname} ${resident.lastname}` : '—';
+      const spouseFull   = spouse   ? `${spouse.firstname} ${spouse.lastname}`     : '—';
 
-      uploadFields.push({ name: 'husbandPhoto', label: 'Husband Photo', required: false, description: 'Optional photo upload.' });
-      uploadFields.push({ name: 'wifePhoto', label: 'Wife Photo', required: false, description: 'Optional photo upload.' });
+      // Determine husband/wife based on resident gender
+      const isHusband = resident?.gender === 'male';
+
+      addField({ label: 'Husband Name / ባል',           key: 'husbandName',   value: isHusband ? residentFull : spouseFull,   required: false });
+      addField({ label: 'Husband Birth Date / ልደት ቀን', key: 'husbandBirthDate', value: formatDate(isHusband ? resident?.birth_date : spouse?.birth_date), required: false });
+      addField({ label: 'Husband Birthplace / ቦታ',     key: 'husbandBirthPlace', value: isHusband ? resident?.birthplace : spouse?.birthplace, required: false });
+      addField({ label: 'Wife Name / ሚስት',             key: 'wifeName',      value: isHusband ? spouseFull : residentFull,   required: false });
+      addField({ label: 'Wife Birth Date / ልደት ቀን',   key: 'wifeBirthDate', value: formatDate(isHusband ? spouse?.birth_date : resident?.birth_date), required: false });
+      addField({ label: 'Wife Birthplace / ቦታ',        key: 'wifeBirthPlace', value: isHusband ? spouse?.birthplace : resident?.birthplace, required: false });
+      addField({ label: 'Marriage Date / ጋብቻ ቀን',     key: 'marriageDate',  value: formatDate(marriage?.marriage_date), required: false });
+      addField({ label: 'Marriage Place / ጋብቻ ቦታ',    key: 'marriagePlace', value: marriage?.marriage_place || '', required: false });
+
+      uploadFields.push({ name: 'husbandPhoto', label: 'Husband Photo / ባል ፎቶ', required: false, description: 'Optional photo upload.' });
+      uploadFields.push({ name: 'wifePhoto',    label: 'Wife Photo / ሚስት ፎቶ',  required: false, description: 'Optional photo upload.' });
+
     } else if (type === 'death' && backendData?.deathReports?.length > 0) {
       const selectedReport = backendData.deathReports.find(d => d.id === selectedDeceasedId) || backendData.deathReports[0];
       const deceasedPerson = backendData.deceasedPeople?.find(p => p.id === selectedReport?.deceased_person_id);
@@ -393,28 +407,45 @@ const ApplyCertificate = () => {
             ) : needsEntityRegistration ? (
               <form onSubmit={handleRegistrationSubmit} className="space-y-6">
                 <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6">
-                  <h3 className="text-lg font-semibold mb-2">Registration Required</h3>
-                  <p className="text-sm text-slate-700 mb-6">
-                    Before applying for a certificate, you must register the corresponding details in the database.
-                  </p>
-                  
                   {needsChildRegistration && (
-                    <div className="grid gap-4">
-                      <div><label className="block text-sm font-medium mb-1">Child First Name</label><input type="text" name="firstname" value={regData.firstname} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
-                      <div><label className="block text-sm font-medium mb-1">Child Last Name</label><input type="text" name="lastname" value={regData.lastname} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
-                      <div><label className="block text-sm font-medium mb-1">Gender</label><select name="gender" value={regData.gender} onChange={handleRegChange} className="w-full p-3 border rounded-xl"><option value="male">Male</option><option value="female">Female</option></select></div>
-                      <div><label className="block text-sm font-medium mb-1">Date of Birth</label><input type="date" name="birth_date" value={regData.birth_date} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
-                      <div><label className="block text-sm font-medium mb-1">Place of Birth</label><input type="text" name="birthplace" value={regData.birthplace} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
-                      <div><label className="block text-sm font-medium mb-1">Hospital Evidence</label><input type="file" accept="image/*,.pdf" onChange={(e) => setRegFile(e.target.files[0])} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-rose-100 file:text-rose-700" /></div>
-                    </div>
+                    <>
+                      {!showChildForm ? (
+                        <div className="text-center py-4">
+                          <h3 className="text-lg font-semibold mb-2">No child record exists.</h3>
+                          <p className="text-sm text-slate-700 mb-6">Would you like to register a child?</p>
+                          <button type="button" onClick={() => setShowChildForm(true)} className="bg-rose-600 hover:bg-rose-700 text-white px-6 py-2 rounded-xl font-medium">Yes, Register Child</button>
+                        </div>
+                      ) : (
+                        <div className="grid gap-4">
+                          <h3 className="text-lg font-semibold mb-2">Child Registration</h3>
+                          <div><label className="block text-sm font-medium mb-1">Child First Name</label><input type="text" name="firstname" value={regData.firstname} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                          <div><label className="block text-sm font-medium mb-1">Child Last Name</label><input type="text" name="lastname" value={regData.lastname} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                          <div><label className="block text-sm font-medium mb-1">Gender</label><select name="gender" value={regData.gender} onChange={handleRegChange} className="w-full p-3 border rounded-xl"><option value="male">Male</option><option value="female">Female</option></select></div>
+                          <div><label className="block text-sm font-medium mb-1">Date of Birth</label><input type="date" name="birth_date" value={regData.birth_date} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                          <div><label className="block text-sm font-medium mb-1">Place of Birth</label><input type="text" name="birthplace" value={regData.birthplace} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                          <div><label className="block text-sm font-medium mb-1">Hospital Evidence</label><input type="file" accept="image/*,.pdf" onChange={(e) => setRegFile(e.target.files[0])} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-rose-100 file:text-rose-700" /></div>
+                        </div>
+                      )}
+                    </>
                   )}
 
-                  {needsMarriageRegistration && (
-                    <div className="grid gap-4">
-                      <div><label className="block text-sm font-medium mb-1">Spouse Resident ID</label><input type="number" name="spouse_id" value={regData.spouse_id} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
-                      <div><label className="block text-sm font-medium mb-1">Marriage Date</label><input type="date" name="marriage_date" value={regData.marriage_date} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
-                      <div><label className="block text-sm font-medium mb-1">Marriage Place</label><input type="text" name="marriage_place" value={regData.marriage_place} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
-                    </div>
+                  {needsMarriageRegistration && backendData?.resident?.marital_status === 'single' && (
+                    <>
+                      {!showMarriageForm ? (
+                        <div className="text-center py-4">
+                          <h3 className="text-lg font-semibold mb-2">No marriage record exists.</h3>
+                          <p className="text-sm text-slate-700 mb-6">Would you like to register a marriage?</p>
+                          <button type="button" onClick={() => setShowMarriageForm(true)} className="bg-rose-600 hover:bg-rose-700 text-white px-6 py-2 rounded-xl font-medium">Yes, Register Marriage</button>
+                        </div>
+                      ) : (
+                        <div className="grid gap-4">
+                          <h3 className="text-lg font-semibold mb-2">Marriage Registration</h3>
+                          <div><label className="block text-sm font-medium mb-1">Spouse Resident ID</label><input type="number" name="spouse_id" value={regData.spouse_id} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                          <div><label className="block text-sm font-medium mb-1">Marriage Date</label><input type="date" name="marriage_date" value={regData.marriage_date} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                          <div><label className="block text-sm font-medium mb-1">Marriage Place</label><input type="text" name="marriage_place" value={regData.marriage_place} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {needsDeathRegistration && (

@@ -894,6 +894,18 @@ const ResidentDashboard = () => {
   const [reportLoading, setReportLoading] = useState(false);
   const [myReports, setMyReports] = useState([]);
 
+  const [deathReportForm, setDeathReportForm] = useState({
+    deceased_person_id: '',
+    family_relationship_type: '',
+    date_of_death: '',
+    cause_of_death: '',
+    place_of_death: ''
+  });
+  const [deathEvidence, setDeathEvidence] = useState(null);
+  const [deathReportSubmitted, setDeathReportSubmitted] = useState(false);
+  const [deathReportLoading, setDeathReportLoading] = useState(false);
+
+
   const [certificates, setCertificates] = useState([]);
   const [userProfile, setUserProfile] = useState({
     name: "Resident User",
@@ -1355,6 +1367,29 @@ const ResidentDashboard = () => {
     }
   };
 
+  const handleDeathReportSubmit = async (e) => {
+    e.preventDefault();
+    setDeathReportLoading(true);
+    try {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const payload = new FormData();
+      Object.entries(deathReportForm).forEach(([k, v]) => payload.append(k, v));
+      if (deathEvidence) payload.append('evidence_document', deathEvidence);
+
+      await axios.post("http://localhost:5000/api/residents/death-report", payload, {
+        headers: { ...config.headers, 'Content-Type': 'multipart/form-data' }
+      });
+      setDeathReportSubmitted(true);
+      notifySuccess("Death report submitted successfully.");
+    } catch (err) {
+      console.error(err);
+      notifyError(err.response?.data?.error || "Failed to submit death report");
+    } finally {
+      setDeathReportLoading(false);
+    }
+  };
+
   return (
     <>
       <style>{css}</style>
@@ -1384,6 +1419,7 @@ const ResidentDashboard = () => {
             {[
               { id: 'certificates', label: 'Certificates', Icon: FileText },
               { id: 'report', label: 'Report Issue', Icon: AlertTriangle },
+              { id: 'death_report', label: 'Death Reporting', Icon: Shield },
               { id: 'profile', label: 'My Profile', Icon: User },
             ].map(({ id, label, Icon }) => (
               <button
@@ -1722,6 +1758,123 @@ const ResidentDashboard = () => {
                   </div>
                 </div>
 
+              </div>
+            </>
+          )}
+          {/* ── DEATH REPORT TAB ── */}
+          {activeTab === 'death_report' && (
+            <>
+              <div className="kd-section-hd">Death Reporting System</div>
+              <div className="kd-grid" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
+                <div>
+                  {deathReportSubmitted ? (
+                    <div className="kd-success-box" style={{ margin: 0 }}>
+                      <div className="kd-success-icon">✅</div>
+                      <div className="kd-success-title">Death Report Submitted Successfully!</div>
+                      <div className="kd-success-desc">
+                        The report has been filed. Kebele administration will review it and notify you once approved.
+                      </div>
+                      <button
+                        className="kd-success-retry"
+                        onClick={() => {
+                          setDeathReportSubmitted(false);
+                          setDeathReportForm({ deceased_person_id: '', family_relationship_type: '', date_of_death: '', cause_of_death: '', place_of_death: '' });
+                          setDeathEvidence(null);
+                        }}
+                      >
+                        Submit Another Report
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="kd-form-card" style={{ margin: 0, maxWidth: '800px' }}>
+                      <div className="kd-form-title">New Death Report</div>
+                      <div className="kd-form-sub">Report a death of a family member. You must be a registered family relative to report this.</div>
+
+                      <form onSubmit={handleDeathReportSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="kd-field">
+                          <label className="kd-label">Deceased Person Resident ID</label>
+                          <input
+                            className="kd-input"
+                            type="number"
+                            placeholder="Enter Resident ID"
+                            value={deathReportForm.deceased_person_id}
+                            onChange={e => setDeathReportForm({ ...deathReportForm, deceased_person_id: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="kd-field">
+                          <label className="kd-label">Your Relationship</label>
+                          <input
+                            className="kd-input"
+                            type="text"
+                            placeholder="E.g., Son, Daughter, Spouse"
+                            value={deathReportForm.family_relationship_type}
+                            onChange={e => setDeathReportForm({ ...deathReportForm, family_relationship_type: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="kd-field">
+                          <label className="kd-label">Date of Death</label>
+                          <input
+                            className="kd-input"
+                            type="date"
+                            value={deathReportForm.date_of_death}
+                            onChange={e => setDeathReportForm({ ...deathReportForm, date_of_death: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="kd-field">
+                          <label className="kd-label">Cause of Death</label>
+                          <input
+                            className="kd-input"
+                            type="text"
+                            placeholder="Reason/Cause"
+                            value={deathReportForm.cause_of_death}
+                            onChange={e => setDeathReportForm({ ...deathReportForm, cause_of_death: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="kd-field">
+                          <label className="kd-label">Place of Death</label>
+                          <input
+                            className="kd-input"
+                            type="text"
+                            placeholder="Hospital or location"
+                            value={deathReportForm.place_of_death}
+                            onChange={e => setDeathReportForm({ ...deathReportForm, place_of_death: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="kd-field md:col-span-2">
+                          <label className="kd-label">Hospital Evidence Document (Image/PDF)</label>
+                          <input
+                            className="kd-input"
+                            type="file"
+                            accept="image/*,.pdf"
+                            onChange={e => setDeathEvidence(e.target.files[0])}
+                            required
+                          />
+                        </div>
+
+                        <div className="kd-field md:col-span-2 mt-2">
+                          <button
+                            type="submit"
+                            className="kd-submit-btn"
+                            disabled={deathReportLoading}
+                          >
+                            {deathReportLoading ? 'Submitting...' : 'Submit Report'}
+                            {!deathReportLoading && <Send />}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}

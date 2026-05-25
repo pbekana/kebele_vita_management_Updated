@@ -38,6 +38,29 @@ const AdminDashboard = () => {
   const [assignTo, setAssignTo] = useState({});
   const { notifySuccess, notifyError, notifyWarning } = useNotification();
 
+  const [usersList, setUsersList] = useState([]);
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersTotal, setUsersTotal] = useState(0);
+
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const res = await axios.get(`${API}/admin/users?page=${usersPage}&limit=10`, config);
+      setUsersList(res.data.users || []);
+      setUsersTotal(res.data.total || 0);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      notifyError('Failed to load users');
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'users') {
+      fetchUsers();
+    }
+  }, [activeTab, usersPage]);
+
   const refreshCertificates = async () => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -692,40 +715,64 @@ const AdminDashboard = () => {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      <th className="px-6 py-4 text-left font-semibold">Name</th>
-                      <th className="px-6 py-4 text-left font-semibold">Email</th>
-                      <th className="px-6 py-4 text-left font-semibold">Role</th>
-                      <th className="px-6 py-4 text-left font-semibold">Status</th>
-                      <th className="px-6 py-4 text-left font-semibold">Actions</th>
+                      <th className="px-6 py-4 text-left font-semibold">Resident ID</th>
+                      <th className="px-6 py-4 text-left font-semibold">Full Name</th>
+                      <th className="px-6 py-4 text-left font-semibold">Gender</th>
+                      <th className="px-6 py-4 text-left font-semibold">Phone Number</th>
+                      <th className="px-6 py-4 text-left font-semibold">Occupation</th>
+                      <th className="px-6 py-4 text-left font-semibold">Marital Status</th>
+                      <th className="px-6 py-4 text-left font-semibold">Address</th>
+                      <th className="px-6 py-4 text-left font-semibold">Registration Date</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[
-                      { id: 1, name: "Abebe Bikila", email: "abebe@example.com", role: "Resident", kebele: "Kebele 01", status: "active" },
-                      { id: 2, name: "Almaz Genene", email: "almaz@example.com", role: "Staff", kebele: "Kebele 02", status: "active" },
-                      { id: 3, name: "Daniel Adeba", email: "daniel@example.com", role: "Resident", kebele: "Kebele 03", status: "inactive" },
-                      { id: 4, name: "Yohannes Mesfin", email: "yohannes@example.com", role: "Manager", kebele: "Kebele 01", status: "active" },
-                      { id: 5, name: "Sara Kebede", email: "sara@example.com", role: "Resident", kebele: "Kebele 02", status: "active" },
-                    ].map(user => (
-                      <tr key={user.id} className="border-b hover:bg-gray-50">
-                        <td className="px-6 py-4 font-medium">{user.name}</td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
-                        <td className="px-6 py-4 text-sm">{user.role}</td>
-                        <td className="px-6 py-4 text-sm">{user.kebele}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${user.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                            }`}>
-                            {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button className="text-blue-600 hover:underline text-sm font-medium">Edit</button>
-                        </td>
+                    {usersList.length === 0 ? (
+                      <tr>
+                        <td colSpan="8" className="px-6 py-8 text-center text-gray-500 font-medium">No users found.</td>
                       </tr>
-                    ))}
+                    ) : (
+                      usersList.map(user => (
+                        <tr key={user.user_id} className="border-b hover:bg-gray-50">
+                          <td className="px-6 py-4 font-medium">#{user.resident_id || user.user_id}</td>
+                          <td className="px-6 py-4 text-sm font-medium">{user.firstname} {user.lastname}</td>
+                          <td className="px-6 py-4 text-sm capitalize">{user.gender || '-'}</td>
+                          <td className="px-6 py-4 text-sm">{user.phone_number || '-'}</td>
+                          <td className="px-6 py-4 text-sm">{user.occupation || '-'}</td>
+                          <td className="px-6 py-4 text-sm capitalize">{user.marital_status || '-'}</td>
+                          <td className="px-6 py-4 text-sm truncate max-w-[150px]">{user.address || '-'}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {user.registration_date ? new Date(user.registration_date).toLocaleDateString() : '-'}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
+              
+              {usersTotal > 0 && (
+                <div className="flex items-center justify-between mt-4 px-4">
+                  <span className="text-sm text-gray-600">
+                    Showing {(usersPage - 1) * 10 + 1} to {Math.min(usersPage * 10, usersTotal)} of {usersTotal} entries
+                  </span>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setUsersPage(prev => Math.max(1, prev - 1))}
+                      disabled={usersPage === 1}
+                      className="px-4 py-2 border rounded-lg text-sm font-medium disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    <button 
+                      onClick={() => setUsersPage(prev => prev + 1)}
+                      disabled={usersPage * 10 >= usersTotal}
+                      className="px-4 py-2 border rounded-lg text-sm font-medium disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

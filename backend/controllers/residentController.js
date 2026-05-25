@@ -214,8 +214,8 @@ const requestCertificate = async (req, res) => {
 
       const [familyCheck] = await connection.query(
         `SELECT 1 FROM family_relationships
-         WHERE (resident_id = ? AND family_member_id = ?)
-            OR (resident_id = ? AND family_member_id = ?)
+         WHERE (resident_id = ? AND related_resident_id = ?)
+            OR (resident_id = ? AND related_resident_id = ?)
          LIMIT 1`,
         [
           resident.id,
@@ -399,8 +399,8 @@ const downloadCertificate = async (req, res) => {
         r.firstname             AS resident_firstname,
         r.lastname              AS resident_lastname,
         r.gender,
-        r.birth_date,
-        r.birthplace,
+        r.birth_date            AS resident_birth_date,
+        r.birthplace            AS resident_birthplace,
         r.marital_status,
         r.father_name,
         r.mother_name,
@@ -440,8 +440,123 @@ const downloadCertificate = async (req, res) => {
       });
     }
 
-    // Resolve spouse name when resident is married and has a spouse_id
+    // ── TYPE-SPECIFIC DATA ENRICHMENT ────────────────────────────────────
+
+    // BIRTH: Get actual child data from children table
+    if (cert.certificate_type === 'birth' && cert.child_name) {
+      // Try to find child by name matching the certificate
+      const childNameParts = cert.child_name.trim().split(/\s+/);
+      const childFirst = childNameParts[0] || '';
+      const [childRows] = await pool.query(
+        `SELECT firstname, lastname, gender, birth_date, birthplace
+         FROM children
+         WHERE (father_id = ? OR mother_id = ?)
+         AND firstname LIKE ?
+         LIMIT 1`,
+        [cert.resident_id, cert.resident_id, `${childFirst}%`]
+      );
+      if (childRows.length > 0) {
+        const child = childRows[0];
+        cert.child_full_name = `${child.firstname} ${child.lastname}`;
+        cert.child_birth_date = child.birth_date;
+        cert.child_birthplace = child.birthplace;
+        cert.child_gender = child.gender;
+      } else {
+        cert.child_full_name = cert.child_name;
+      }
+      // For birth cert, father/mother name comes from the resident
+      if (cert.gender === 'male') {
+        cert.father_name = cert.father_name || `${cert.resident_firstname} ${cert.resident_lastname}`;
+      } else {
+        cert.mother_name = cert.mother_name || `${cert.resident_firstname} ${cert.resident_lastname}`;
+      }
+    }
+
+    // MARRIAGE: Enrich with marriage_relationships and spouse data
+    if (cert.certificate_type === 'marriage') {
+      const residentFullName = `${cert.resident_firstname} ${cert.resident_lastname}`.trim();
+
+      // Check marriage_relationships table for enriched data
+      const [marriageRows] = await pool.query(
+        `SELECT mr.*,
+           h.firstname AS h_firstname, h.lastname AS h_lastname,
+           h.birth_date AS h_birth_date, h.birthplace AS h_birthplace, h.gender AS h_gender,
+           w.firstname AS w_firstname, w.lastname AS w_lastname,
+           w.birth_date AS w_birth_date, w.birthplace AS w_birthplace, w.gender AS w_gender
+         FROM marriage_relationships mr
+         INNER JOIN residents h ON mr.husband_id = h.id
+         INNER JOIN residents w ON mr.wife_id = w.id
+         WHERE mr.husband_id = ? OR mr.wife_id = ?
+         ORDER BY mr.created_at DESC
+         LIMIT 1`,
+        [cert.resident_id, cert.resident_id]
+      );
+
+      if (marriageRows.length > 0) {
+        const m = marriageRows[0];
+        cert.husband_name = `${m.h_firstname} ${m.h_lastname}`.trim();
+        cert.wife_name    = `${m.w_firstname} ${m.w_lastname}`.trim();
+        cert.husband_birth_date  = m.h_birth_date;
+        cert.husband_birth_place = m.h_birthplace;
+        cert.wife_birth_date     = m.w_birth_date;
+        cert.wife_birth_place    = m.w_birthplace;
+        cert.marriage_date  = cert.marriage_date  || m.marriage_date;
+        cert.marriage_place = cert.marriage_place || m.marriage_place;
+      } else if (cert.husband_name || cert.wife_name) {
+        // Fallback: data already stored in the certificate row itself
+        // Try to enrich one side from the resident row
+        if (cert.gender === 'male') {
+          cert.husband_name = cert.husband_name || residentFullName;
+          cert.husband_birth_date  = cert.husband_birth_date  || cert.resident_birth_date;
+          cert.husband_birth_place = cert.husband_birth_place || cert.resident_birthplace;
+        } else {
+          cert.wife_name = cert.wife_name || residentFullName;
+          cert.wife_birth_date  = cert.wife_birth_date  || cert.resident_birth_date;
+          cert.wife_birth_place = cert.wife_birth_place || cert.resident_birthplace;
+        }
+      }
+
+      // Resolve spouse name from residents table if still missing one side
+      if (cert.spouse_id && (!cert.husband_name || !cert.wife_name)) {
+        const [spouseRows] = await pool.query(
+          `SELECT firstname, lastname, birth_date, birthplace, gender FROM residents WHERE id = ? LIMIT 1`,
+          [cert.spouse_id]
+        );
+        if (spouseRows.length > 0) {
+          const sp = spouseRows[0];
+          const spouseFull = `${sp.firstname} ${sp.lastname}`;
+          if (sp.gender === 'male' || cert.gender === 'female') {
+            cert.husband_name        = cert.husband_name || spouseFull;
+            cert.husband_birth_date  = cert.husband_birth_date  || sp.birth_date;
+            cert.husband_birth_place = cert.husband_birth_place || sp.birthplace;
+          } else {
+            cert.wife_name        = cert.wife_name || spouseFull;
+            cert.wife_birth_date  = cert.wife_birth_date  || sp.birth_date;
+            cert.wife_birth_place = cert.wife_birth_place || sp.birthplace;
+          }
+        }
+      }
+    }
+
+    // DEATH: Enrich with deceased person data
+    if (cert.certificate_type === 'death' && cert.deceased_resident_id) {
+      const [deceasedRows] = await pool.query(
+        `SELECT firstname, lastname, gender, birth_date FROM residents WHERE id = ? LIMIT 1`,
+        [cert.deceased_resident_id]
+      );
+      if (deceasedRows.length > 0) {
+        const dec = deceasedRows[0];
+        cert.deceased_full_name = `${dec.firstname} ${dec.lastname}`;
+        cert.deceased_gender    = dec.gender;
+        cert.deceased_birth_date = dec.birth_date;
+        // For death cert the "child_name" field stores the deceased name in the legacy flow
+        cert.child_name = cert.child_name || cert.deceased_full_name;
+      }
+    }
+
+    // Resolve spouse name for residency certs (married residents)
     if (
+      cert.certificate_type !== 'marriage' &&
       (cert.marital_status || '').toLowerCase() === 'married' &&
       cert.spouse_id
     ) {
@@ -454,10 +569,7 @@ const downloadCertificate = async (req, res) => {
       }
     }
 
-    // Always generate a fresh standards-compliant A5 PDF from the template.
-    // We intentionally skip serving cert.pdf_url (staff-uploaded file) so that
-    // every download — including previously approved certificates — uses the
-    // unified layout with correct type-specific sections.
+    // Always generate a fresh standards-compliant PDF from the template.
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
@@ -567,8 +679,40 @@ const getProfile = async (req, res) => {
       });
     }
 
+    const profile = rows[0];
+
+    // Fetch related data dynamically
+    const [children] = await pool.query(
+      `SELECT * FROM children WHERE father_id = ? OR mother_id = ?`,
+      [profile.id, profile.id]
+    );
+
+    const [familyRelationships] = await pool.query(
+      `SELECT fr.*, r.firstname, r.lastname 
+       FROM family_relationships fr
+       INNER JOIN residents r ON fr.related_resident_id = r.id
+       WHERE fr.resident_id = ?`,
+      [profile.id]
+    );
+
+    const [marriageRelationships] = await pool.query(
+      `SELECT * FROM marriage_relationships 
+       WHERE husband_id = ? OR wife_id = ?`,
+      [profile.id, profile.id]
+    );
+
+    const [deathReports] = await pool.query(
+      `SELECT * FROM death_reports WHERE reporter_id = ?`,
+      [profile.id]
+    );
+
+    profile.children = children;
+    profile.family_relationships = familyRelationships;
+    profile.marriage_relationships = marriageRelationships;
+    profile.death_reports = deathReports;
+
     return res.status(200).json({
-      profile: rows[0],
+      profile,
     });
   } catch (err) {
     return serverError(res, err);
@@ -680,31 +824,51 @@ const getCertificatePreviewData = async (req, res) => {
 
     // Marriage Certificate Data
     if (type === 'marriage') {
-      if (resident.spouse_id) {
+      // First check marriage_relationships for the most complete data
+      const [marriages] = await pool.query(
+        `SELECT mr.*,
+           h.firstname AS h_firstname, h.lastname AS h_lastname,
+           h.birth_date AS h_birth_date, h.birthplace AS h_birthplace,
+           w.firstname AS w_firstname, w.lastname AS w_lastname,
+           w.birth_date AS w_birth_date, w.birthplace AS w_birthplace
+         FROM marriage_relationships mr
+         INNER JOIN residents h ON mr.husband_id = h.id
+         INNER JOIN residents w ON mr.wife_id = w.id
+         WHERE (mr.husband_id = ? OR mr.wife_id = ?)
+         AND mr.status = 'active'
+         ORDER BY mr.created_at DESC
+         LIMIT 1`,
+        [resident.id, resident.id]
+      );
+
+      if (marriages.length > 0) {
+        const m = marriages[0];
+        data.marriageRelationship = m;
+
+        // Determine which resident is husband vs wife
+        const isHusband = m.husband_id === resident.id;
+        const spouseId  = isHusband ? m.wife_id : m.husband_id;
+
+        data.spouseData = {
+          id:        spouseId,
+          firstname: isHusband ? m.w_firstname : m.h_firstname,
+          lastname:  isHusband ? m.w_lastname  : m.h_lastname,
+          birth_date: isHusband ? m.w_birth_date : m.h_birth_date,
+          birthplace: isHusband ? m.w_birthplace : m.h_birthplace,
+        };
+      } else if (resident.spouse_id) {
+        // Fallback: use spouse_id from residents table
         const [spouse] = await pool.query(
           `SELECT id, firstname, lastname, gender, birth_date, birthplace, phone_number
-           FROM residents
-           WHERE id = ?
-           LIMIT 1`,
+           FROM residents WHERE id = ? LIMIT 1`,
           [resident.spouse_id]
         );
         if (spouse.length > 0) {
           data.spouseData = spouse[0];
         }
       }
-
-      // Also check marriage_relationships table
-      const [marriages] = await pool.query(
-        `SELECT * FROM marriage_relationships
-         WHERE (husband_id = ? OR wife_id = ?)
-         AND status = 'active'
-         LIMIT 1`,
-        [resident.id, resident.id]
-      );
-      if (marriages.length > 0) {
-        data.marriageRelationship = marriages[0];
-      }
     }
+
 
     // Death Certificate Data
     if (type === 'death') {
@@ -781,8 +945,8 @@ const createDeathReport = async (req, res) => {
     // Verify family relationship exists
     const [familyCheck] = await pool.query(
       `SELECT 1 FROM family_relationships
-       WHERE (resident_id = ? AND family_member_id = ?)
-          OR (resident_id = ? AND family_member_id = ?)
+       WHERE (resident_id = ? AND related_resident_id = ?)
+          OR (resident_id = ? AND related_resident_id = ?)
        LIMIT 1`,
       [reporterId, deceased_person_id, deceased_person_id, reporterId]
     );

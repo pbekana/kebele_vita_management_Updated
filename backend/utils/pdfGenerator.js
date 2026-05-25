@@ -1,409 +1,465 @@
 const PDFDocument = require('pdfkit');
-const fs = require('fs');
+const fs   = require('fs');
 const path = require('path');
 const { validateAndSanitize } = require('./certificateValidator');
 
 // ─── Colour palette ────────────────────────────────────────────────────────
 const C = {
-  green:   '#078930', 
-  white:   '#ffffff',
-  navy:    '#1a237e', 
-  black:   '#000000',
-  gray:    '#cccccc', 
-  red:     '#d32f2f', 
-  darkGray:'#546e7a',
-  lightBg: '#f5f5f5',
+  green:    '#078930',
+  gold:     '#fcdd09',
+  red:      '#da121a',
+  white:    '#ffffff',
+  navy:     '#1a237e',
+  black:    '#000000',
+  gray:     '#cccccc',
+  darkGray: '#546e7a',
+  lightBg:  '#f5f7ff',
+  midGray:  '#90a4ae',
 };
 
-const A5_W = 419.53; 
-const A5_H = 595.28; 
-const MARGIN = 18;
-const CONTENT_W = A5_W - MARGIN * 2;
+// ─── Page dimensions (A4) ──────────────────────────────────────────────────
+const A4_W   = 595.28;
+const A4_H   = 841.89;
+const MARGIN = 30;
+const CW     = A4_W - MARGIN * 2;         // usable content width
+const FOOTER_H = 72;                       // reserved at bottom
+const MAX_Y    = A4_H - FOOTER_H - 10;    // never render below this
 
-// ─── Formatting Helpers ────────────────────────────────────────────────────
+// ─── Formatting helpers ────────────────────────────────────────────────────
 function fmtDate(val) {
-  if (!val || val === '—' || val === '-' || val === 'N/A' || val === 'null' || val === 'undefined') return '';
+  if (!val || val === '—' || val === 'null' || val === 'undefined') return '—';
   const d = new Date(val);
   if (isNaN(d.getTime())) return String(val);
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  return `${dd}/${mm}/${d.getFullYear()}`;
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+function s(v) {
+  if (v === null || v === undefined || v === '' || v === '—' || v === 'null' || v === 'undefined') return '—';
+  return String(v);
 }
 
-function s(v) { 
-  if (v === null || v === undefined || v === '' || v === '—' || v === '-' || v === 'N/A' || v === 'null' || v === 'undefined') return '';
-  return v;
+// ─── Drawing primitives ────────────────────────────────────────────────────
+function hline(doc, x, y, w, color = C.gray, lw = 0.5) {
+  doc.moveTo(x, y).lineTo(x + w, y).lineWidth(lw).strokeColor(color).stroke();
 }
 
-function sanitizeText(val) {
-  if (!val) return '';
-  let cleaned = String(val);
-  cleaned = cleaned.replace(/[\u200B-\u200D\uFEFF]/g, '');
-  cleaned = cleaned.replace(/\s+/g, ' ');
-  return cleaned.trim();
+function sectionBanner(doc, title, y) {
+  doc.rect(MARGIN, y, CW, 14).fill('#e8edf8');
+  doc.font('Bold').fontSize(7.5).fillColor(C.navy)
+     .text(title.toUpperCase(), MARGIN + 6, y + 3, { width: CW - 12, lineBreak: false });
+  return y + 18;
 }
 
-// ─── Drawing Helpers ───────────────────────────────────────────────────────
-function fieldRow(doc, label, value, x, y, labelW, totalW) {
-  const valX = x + labelW + 2;
-  const valW = totalW - labelW - 2;
-
-  const cleanLabel = sanitizeText(label) + ':';
-  const cleanVal = sanitizeText(s(value));
-
-  doc.font('Amharic-Bold').fontSize(6.5).fillColor(C.navy)
-     .text(cleanLabel, x, y, { width: labelW, lineBreak: false, ellipsis: true });
-
-  doc.font('Amharic-Regular').fontSize(6.5).fillColor(C.black)
-     .text(cleanVal, valX, y, { width: valW, lineBreak: false, ellipsis: true });
+// Two-column field row: label on left, value on right
+function fieldRow(doc, label, value, x, y, labelW, fieldW) {
+  const valStr = s(value);
+  doc.font('Bold').fontSize(7).fillColor(C.navy)
+     .text(label + ':', x, y, { width: labelW, lineBreak: false, ellipsis: true });
+  doc.font('Regular').fontSize(7).fillColor(C.black)
+     .text(valStr, x + labelW + 4, y, { width: fieldW - labelW - 4, lineBreak: false, ellipsis: true });
+  return y + 11;
 }
 
-function sectionTitle(doc, title, x, y, w) {
-  doc.moveTo(x, y + 10)
-     .lineTo(x + w, y + 10)
-     .lineWidth(0.8)
-     .strokeColor(C.navy)
-     .stroke();
-
-  doc.font('Amharic-Bold').fontSize(7).fillColor(C.navy)
-     .text(title.toUpperCase(), x, y, { width: w });
-
-  return y + 14; 
+// Two fields side by side
+function doubleRow(doc, f1, v1, f2, v2, y) {
+  const half = CW / 2 - 6;
+  const lw   = half * 0.44;
+  fieldRow(doc, f1, v1, MARGIN,           y, lw, half);
+  fieldRow(doc, f2, v2, MARGIN + half + 12, y, lw, half);
+  return y + 11;
 }
 
-function borderBox(doc, x, y, w, h) {
+// ─── Image box ────────────────────────────────────────────────────────────
+function imageBox(doc, x, y, w, h, photoPath, caption) {
   doc.rect(x, y, w, h).lineWidth(0.5).strokeColor(C.gray).stroke();
-}
-
-// ─── Render Pipeline Components ────────────────────────────────────────────
-
-function drawWatermark(doc) {
-  doc.save();
-  doc.rotate(-35, { origin: [A5_W / 2, A5_H / 2] });
-  doc.font('Amharic-Bold')
-     .fontSize(38)
-     .fillColor('rgba(200,200,200,0.18)')
-     .fillOpacity(0.18)
-     .text('OFFICIAL DOCUMENT', -20, A5_H / 2 - 20, {
-       width: A5_W + 40,
-       align: 'center',
-       characterSpacing: 4,
-     });
-  doc.fillOpacity(1);
-  doc.restore();
-}
-
-function drawHeader(doc, data) {
-  const hH = 72; 
-  doc.rect(0, 0, A5_W, hH).fill(C.green);
-  doc.moveTo(0, hH).lineTo(A5_W, hH).lineWidth(1.5).strokeColor('#005a20').stroke();
-
-  let hy = 6;
-  doc.font('Amharic-Bold').fontSize(8.5).fillColor(C.white)
-     .text('FEDERAL DEMOCRATIC REPUBLIC OF ETHIOPIA', MARGIN, hy, { width: CONTENT_W, align: 'center' });
-  hy += 11;
-  doc.font('Amharic-Regular').fontSize(7.5).fillColor(C.white)
-     .text(' የኢትዮጵያ ፌዴራላዊ ዴሞክራሲያዊ ሪፐብሊክ', MARGIN, hy, { width: CONTENT_W, align: 'center' });
-  hy += 10;
-
-  const logoSize = 16;
-  const logoX = MARGIN + (CONTENT_W / 2) - logoSize / 2 - 70;
-  doc.circle(logoX + logoSize / 2, hy + logoSize / 2, logoSize / 2)
-     .lineWidth(0.8).strokeColor(C.white).stroke();
-  doc.font('Amharic-Regular').fontSize(4).fillColor(C.white)
-     .text('LOGO', logoX, hy + logoSize / 2 - 2, { width: logoSize, align: 'center' });
-
-  doc.font('Amharic-Regular').fontSize(6.2).fillColor(C.white)
-     .text(
-       'Oromia Region · Jimma Zone · Jimma Woreda · Heremata Mentina Kebele\n' +
-       'ኦሮሚያ ክልል · ጅማ ዞን · ጅማ ወረዳ · ሔረማታ መንቲና ቀበሌ',
-       logoX + logoSize + 4, hy + 2,
-       { width: CONTENT_W - logoSize - 8, lineBreak: true }
-     );
-  hy += logoSize + 2;
-
-  const titleMap = {
-    birth:        'BIRTH CERTIFICATE / የልደት ምስክር ወረቀት',
-    death:        'DEATH CERTIFICATE / የሞት ምስክር ወረቀት',
-    marriage:     'MARRIAGE CERTIFICATE / የጋብቻ ምስክር ወረቀት',
-    'residency-id': 'RESIDENT ID CARD / የቀበሌ ነዋሪ መታወቂያ ካርድ',
-    residency:    'RESIDENCY CERTIFICATE / የነዋሪነት ምስክር ወረቀት',
-  };
-  const certTitle = titleMap[data.certificateType] || data.certificateType.toUpperCase();
-
-  doc.font('Amharic-Bold').fontSize(8).fillColor('#ffeb3b')
-     .text(certTitle, MARGIN, hy, { width: CONTENT_W, align: 'center' });
-  hy += 11;
-
-  doc.font('Amharic-Bold').fontSize(6.5).fillColor(C.white)
-     .text(`Certificate No / ምስክር ወረቀት ቁጥር: ${data.certificateNumber}`, MARGIN, hy, { width: CONTENT_W, align: 'center' });
-}
-
-function drawImageBox(doc, x, startY, width, height, photoPath, label) {
-  borderBox(doc, x, startY, width, height);
   let drawn = false;
-  
-  if (photoPath && photoPath !== '—' && photoPath !== 'null' && photoPath !== 'undefined') {
-    const absPhoto = path.isAbsolute(photoPath) ? photoPath : path.join(__dirname, '..', photoPath);
+  if (photoPath && photoPath !== 'null' && photoPath !== 'undefined') {
+    const abs = path.isAbsolute(photoPath)
+      ? photoPath
+      : path.join(__dirname, '..', photoPath);
     try {
-      if (fs.existsSync(absPhoto)) {
-        doc.image(absPhoto, x + 1, startY + 1, { width: width - 2, height: height - 2, cover: [width - 2, height - 2] });
+      if (fs.existsSync(abs)) {
+        doc.image(abs, x + 1, y + 1, { width: w - 2, height: h - 2, cover: [w - 2, h - 2] });
         drawn = true;
       }
     } catch (_) {}
   }
-  
   if (!drawn) {
-    doc.font('Amharic-Regular').fontSize(6.5).fillColor(C.darkGray)
-       .text(`👤\n3×4 Photo\n${label}`, x + 2, startY + height / 2 - 14, { width: width - 4, align: 'center' });
+    doc.font('Regular').fontSize(6).fillColor(C.darkGray)
+       .text(`👤\n3×4\n${caption}`, x, y + h / 2 - 10, { width: w, align: 'center' });
   }
+  return y + h + 2;
 }
 
-// ─── Unified Schema Renderer ───────────────────────────────────────────────
+// ─── HEADER ───────────────────────────────────────────────────────────────
+function drawHeader(doc, data) {
+  const HH = 80;
 
-const BASE_SCHEMA = [
-  { type: 'section', title: 'Personal Information / የግል መረጃ' },
-  { type: 'custom_photo_personal' }, 
-  { type: 'section', title: 'Family Information / የቤተሰብ መረጃ' },
-  { type: 'row', fields: [
-    { label: "Father's Name / የአባት ስም", key: 'fatherName', ratio: 0.5 },
-    { label: "Mother's Name / የእናት ስም", key: 'motherName', ratio: 0.5 }
-  ]},
-  { type: 'row', fields: [
-    { label: 'Spouse Name / የትዳር አጋር ስም', key: 'spouseName', ratio: 1.0, condition: (d) => d.maritalStatus && d.maritalStatus.toLowerCase() === 'married' }
-  ]},
-  { type: 'section', title: 'Address / አድራሻ' },
-  { type: 'row', fields: [
-    { label: 'Region / ክልል', key: 'region', ratio: 0.5 },
-    { label: 'Zone / ዞን', key: 'zone', ratio: 0.5 }
-  ]},
-  { type: 'row', fields: [
-    { label: 'Woreda / ወረዳ', key: 'woreda', ratio: 0.5 },
-    { label: 'Kebele / ቀበሌ', key: 'kebele', ratio: 0.5 }
-  ]},
-  { type: 'row', fields: [
-    { label: 'House No / የቤት ቁጥር', key: 'houseNumber', ratio: 1.0 }
-  ]},
-  { type: 'row', fields: [
-    { label: 'Full Address / ሙሉ አድራሻ', key: 'fullAddress', ratio: 1.0, condition: (d) => d.fullAddress }
-  ]},
-  { type: 'section', title: 'Contact & Work / ግንኙነት እና ሥራ' },
-  { type: 'row', fields: [
-    { label: 'Phone / ስልክ', key: 'phone', ratio: 0.5 },
-    { label: 'Occupation / ሥራ', key: 'occupation', ratio: 0.5 }
-  ]},
-  { type: 'row', fields: [
-    { label: 'Education / ትምህርት', key: 'education', ratio: 0.5 },
-    { label: 'Emergency Contact / አደጋ ጊዜ ተጠሪ', key: 'emergencyContact', ratio: 0.5 }
-  ]}
-];
+  // Ethiopian flag stripe accent
+  doc.rect(0, 0, A4_W, 5).fill(C.green);
+  doc.rect(0, 5, A4_W, 5).fill(C.gold);
+  doc.rect(0, 10, A4_W, 5).fill(C.red);
 
-const SPECIFIC_SCHEMA = {
-  'residency-id': [
-    { type: 'section', title: 'Card Validity / የካርዱ ፀናነት' },
-    { type: 'row', fields: [
-      { label: 'Reg. Date / ምዝገባ', key: 'registrationDate', isDate: true, ratio: 0.33 },
-      { label: 'Issue Date / የተሰጠበት', key: 'issueDate', isDate: true, ratio: 0.33 },
-      { label: 'Expiry / ሚያበቃበት', key: 'expiryDate', isDate: true, ratio: 0.33 }
-    ]}
-  ],
-  'residency': [
-    { type: 'section', title: 'Certificate Details / የካርዱ ፀናነት' },
-    { type: 'row', fields: [
-      { label: 'Reg. Date / ምዝገባ', key: 'registrationDate', isDate: true, ratio: 0.33 },
-      { label: 'Issue Date / የተሰጠበት', key: 'issueDate', isDate: true, ratio: 0.33 },
-      { label: 'Expiry / ሚያበቃበት', key: 'expiryDate', isDate: true, ratio: 0.33 }
-    ]}
-  ],
-  'death': [
-    { type: 'custom_death_photo' },
-    { type: 'section', title: 'Death Details / የሞት ዝርዝር' },
-    { type: 'row', fields: [
-      { label: 'Date of Death / የሞት ቀን', key: 'deathDate', isDate: true, ratio: 0.5 },
-      { label: 'Place of Death / የሞት ቦታ', key: 'deathPlace', ratio: 0.5 }
-    ]},
-    { type: 'row', fields: [{ label: 'Cause of Death / የሞት ምክንያት', key: 'causeOfDeath', ratio: 1.0 }] },
-    { type: 'row', fields: [{ label: 'Manner of Death / የሞት ሁኔታ', key: 'mannerOfDeath', ratio: 1.0 }] },
-    { type: 'row', fields: [{ label: 'Reporter / ዘጋቢ', key: 'fullName', ratio: 1.0 }] }
-  ],
-  'birth': [
-    { type: 'custom_birth_photo' },
-    { type: 'section', title: 'Birth Details / የልደት ዝርዝር' },
-    { type: 'row', fields: [
-      { label: "Child's Name / የልጅ ስም", key: 'childName', ratio: 0.5 },
-      { label: 'Date of Birth / ልደት ቀን', key: 'birthDate', isDate: true, ratio: 0.5 }
-    ]},
-    { type: 'row', fields: [
-      { label: 'Birth Place / ልደት ቦታ', key: 'birthPlace', ratio: 0.5 },
-      { label: "Father's Name / የአባት ስም", key: 'fatherName', ratio: 0.5 }
-    ]},
-    { type: 'row', fields: [{ label: "Mother's Name / የእናት ስም", key: 'motherName', ratio: 1.0 }] },
-    { type: 'row', fields: [{ label: 'Registered By / ዘጋቢ', key: 'fullName', ratio: 1.0 }] }
-  ],
-  'marriage': [
-    { type: 'custom_marriage_photo' },
-    { type: 'section', title: 'Marriage Details / የጋብቻ ዝርዝር' },
-    { type: 'row', fields: [
-      { label: 'Husband / ባል', key: 'husbandName', ratio: 0.5 },
-      { label: 'Wife / ሚስት', key: 'wifeName', ratio: 0.5 }
-    ]},
-    { type: 'row', fields: [
-      { label: 'Marriage Date / ጋብቻ ቀን', key: 'marriageDate', isDate: true, ratio: 0.5 },
-      { label: 'Marriage Place / ጋብቻ ቦታ', key: 'marriagePlace', ratio: 0.5 }
-    ]},
-    { type: 'row', fields: [{ label: 'Witness 1 / ምስክር 1', key: 'witnessName', ratio: 1.0 }] },
-    { type: 'section', title: 'Partner Birth Details / የአጋር የልደት መረጃ', condition: (d) => d.husbandBirthDate || d.wifeBirthDate },
-    { type: 'row', fields: [
-      { label: 'Husband Birth Date / የባል የልደት ቀን', key: 'husbandBirthDate', isDate: true, ratio: 0.5 },
-      { label: 'Wife Birth Date / የሚስት የልደት ቀን', key: 'wifeBirthDate', isDate: true, ratio: 0.5 }
-    ], condition: (d) => d.husbandBirthDate || d.wifeBirthDate },
-    { type: 'row', fields: [
-      { label: 'Husband Birthplace / የባል የልደት ቦታ', key: 'husbandBirthPlace', ratio: 0.5 },
-      { label: 'Wife Birthplace / የሚስት የልደት ቦታ', key: 'wifeBirthPlace', ratio: 0.5 }
-    ], condition: (d) => d.husbandBirthDate || d.wifeBirthDate }
-  ]
-};
+  // Header background
+  doc.rect(0, 15, A4_W, HH - 15).fill('#0d1b3e');
 
-function drawSchemaFields(doc, schema, data, startY) {
-  let y = startY;
-  const gap = 10;
+  let hy = 20;
+  doc.font('Bold').fontSize(9).fillColor(C.white)
+     .text('FEDERAL DEMOCRATIC REPUBLIC OF ETHIOPIA', MARGIN, hy, { width: CW, align: 'center' });
+  hy += 11;
+  doc.font('Regular').fontSize(7.5).fillColor('#93c5fd')
+     .text('የኢትዮጵያ ፌዴራላዊ ዴሞክራሲያዊ ሪፐብሊክ', MARGIN, hy, { width: CW, align: 'center' });
+  hy += 10;
+  doc.font('Regular').fontSize(6.5).fillColor(C.midGray)
+     .text('Oromia Region · Jimma Zone · Jimma Woreda · Heremata Mentina Kebele', MARGIN, hy, { width: CW, align: 'center' });
+  hy += 9;
+  doc.font('Regular').fontSize(6).fillColor(C.midGray)
+     .text('ኦሮሚያ ክልል · ጅማ ዞን · ጅማ ወረዳ · ሔረማታ መንቲና ቀበሌ', MARGIN, hy, { width: CW, align: 'center' });
+  hy += 9;
 
-  for (const block of schema) {
-    if (block.condition && !block.condition(data)) continue;
+  const titleMap = {
+    birth:          'BIRTH CERTIFICATE',
+    death:          'DEATH CERTIFICATE',
+    marriage:       'MARRIAGE CERTIFICATE',
+    'residency-id': 'RESIDENT IDENTITY CARD',
+    residency:      'RESIDENCY CERTIFICATE',
+  };
+  const amhTitle = {
+    birth:          'የልደት ምስክር ወረቀት',
+    death:          'የሞት ምስክር ወረቀት',
+    marriage:       'የጋብቻ ምስክር ወረቀት',
+    'residency-id': 'የቀበሌ ነዋሪ መታወቂያ',
+    residency:      'የነዋሪነት ምስክር ወረቀት',
+  };
+  doc.font('Bold').fontSize(11).fillColor(C.gold)
+     .text(titleMap[data.certificateType] || data.certificateType.toUpperCase(), MARGIN, hy, { width: CW, align: 'center' });
+  hy += 13;
+  doc.font('Regular').fontSize(7.5).fillColor(C.white)
+     .text(amhTitle[data.certificateType] || '', MARGIN, hy, { width: CW, align: 'center' });
 
-    if (block.type === 'section') {
-      y = sectionTitle(doc, block.title, MARGIN, y, CONTENT_W);
-    } else if (block.type === 'row') {
-      const activeFields = block.fields.filter(f => !f.condition || f.condition(data));
-      if (activeFields.length === 0) continue;
-      
-      let curX = MARGIN;
-      for (const field of activeFields) {
-        const fieldWidth = (CONTENT_W * field.ratio) - (activeFields.length > 1 ? 4 : 0);
-        const labelW = fieldWidth * 0.46; // Ratio for label vs value
-        let val = field.customVal ? field.customVal(data) : data[field.key];
-        if (field.isDate) val = fmtDate(val);
+  // Certificate number badge
+  const badgeY = HH - 2;
+  doc.rect(0, badgeY, A4_W, 14).fill('#1e3a5f');
+  doc.font('Bold').fontSize(7).fillColor(C.gold)
+     .text(`Certificate No. / ቁጥር:  ${data.certificateNumber}`, MARGIN, badgeY + 3, { width: CW, align: 'center' });
 
-        fieldRow(doc, field.label, val, curX, y, labelW, fieldWidth);
-        curX += fieldWidth + 8;
-      }
-      y += gap;
-    } else if (block.type === 'custom_photo_personal') {
-      // ── Custom Photo & Personal Info Layout ──
-      // Completely devoid of biometric / fingerprint boxes
-      const photoColW = 78;
-      const personalColX = MARGIN + photoColW + 6;
-      const personalColW = CONTENT_W - photoColW - 6;
-      const photoBoxH = 85;
-
-      drawImageBox(doc, MARGIN, y, photoColW, photoBoxH, data.photoPath, 'ፎቶግራፍ');
-      doc.font('Amharic-Regular').fontSize(5.5).fillColor(C.darkGray)
-         .text('Photo / ፎቶ', MARGIN, y + photoBoxH + 1, { width: photoColW, align: 'center' });
-
-      const lW = personalColW * 0.44; 
-      let py = y;
-      
-      const pRows = [
-        ['Full Name / ሙሉ ስም', data.fullName],
-        ['Gender / ጾታ', data.gender],
-        ['Date of Birth / ልደት ቀን', fmtDate(data.birthDate)],
-        ['Birthplace / ትውልድ ቦታ', data.birthPlace],
-        ['Nationality / ዜግነት', data.nationality],
-        ['Religion / ሃይማኖት', data.religion],
-        ['Marital Status / ጋብቻ', data.maritalStatus],
-        ['Disability / አካል ጉዳት', data.disabilityStatus ? 'Yes / አዎ' : 'No / የለም'],
-      ];
-
-      pRows.forEach(([label, value]) => {
-        fieldRow(doc, label, value, personalColX, py, lW, personalColW);
-        py += gap;
-      });
-
-      y = Math.max(py, y + photoBoxH + 14);
-      
-      // Thin divider
-      doc.moveTo(MARGIN, y).lineTo(A5_W - MARGIN, y).lineWidth(0.4).strokeColor(C.gray).stroke();
-      y += 4;
-    } else if (block.type === 'custom_birth_photo' || block.type === 'custom_death_photo') {
-      const isDeath = block.type === 'custom_death_photo';
-      y = sectionTitle(doc, isDeath ? 'Deceased Photo / የሞተው ፎቶ' : 'Child Photo / የልጅ ፎቶ', MARGIN, y, CONTENT_W);
-      const boxW = 110;
-      const boxH = 90;
-      drawImageBox(doc, MARGIN, y, boxW, boxH, isDeath ? data.deceasedPhotoPath : data.childPhotoPath, isDeath ? 'የሞተው ፎቶ' : 'የልጅ ፎቶ');
-      doc.font('Amharic-Regular').fontSize(5.5).fillColor(C.darkGray)
-         .text(isDeath ? 'Deceased Photo / የሞተው ፎቶ' : 'Child Photo / የልጅ ፎቶ', MARGIN, y + boxH + 2, { width: boxW, align: 'center' });
-      y += boxH + 14;
-    } else if (block.type === 'custom_marriage_photo') {
-      y = sectionTitle(doc, 'Couple Photos / የባልና ሚስት ፎቶ', MARGIN, y, CONTENT_W);
-      const boxW = (CONTENT_W - 8) / 2;
-      const boxH = 76;
-      drawImageBox(doc, MARGIN, y, boxW, boxH, data.husbandPhotoPath, 'ባል');
-      drawImageBox(doc, MARGIN + boxW + 8, y, boxW, boxH, data.wifePhotoPath, 'ሚስት');
-
-      doc.font('Amharic-Regular').fontSize(5.5).fillColor(C.darkGray)
-         .text('Husband / ባል', MARGIN, y + boxH + 2, { width: boxW, align: 'center' });
-      doc.font('Amharic-Regular').fontSize(5.5).fillColor(C.darkGray)
-         .text('Wife / ሚስት', MARGIN + boxW + 8, y + boxH + 2, { width: boxW, align: 'center' });
-      y += boxH + 16;
-    }
-  }
-
-  return y;
+  return HH + 14 + 6; // return starting Y for content
 }
 
-// ─── FOOTER ─────────────────────────────────────────────────────────────────
-function drawFooter(doc) {
-  const footerH = 58;
-  const footerY = A5_H - footerH - 6;
+// ─── WATERMARK ────────────────────────────────────────────────────────────
+function drawWatermark(doc) {
+  doc.save();
+  doc.rotate(-35, { origin: [A4_W / 2, A4_H / 2] });
+  doc.font('Bold').fontSize(52).fillColor('#e0e7ff').fillOpacity(0.12)
+     .text('OFFICIAL', 80, A4_H / 2 - 30, { width: A4_W - 160, align: 'center', characterSpacing: 8 });
+  doc.fillOpacity(1);
+  doc.restore();
+}
 
-  doc.moveTo(MARGIN, footerY)
-     .lineTo(A5_W - MARGIN, footerY)
-     .lineWidth(0.8).strokeColor(C.gray).stroke();
+// ─── FOOTER ───────────────────────────────────────────────────────────────
+function drawFooter(doc, data) {
+  const fy = A4_H - FOOTER_H;
 
-  const sigW   = CONTENT_W * 0.35;
-  const stampW = CONTENT_W * 0.22;
-  const sigRX  = MARGIN + sigW + stampW + (CONTENT_W - sigW * 2 - stampW) / 2;
-  const stampX = MARGIN + sigW + (CONTENT_W - sigW * 2 - stampW) / 2;
+  hline(doc, MARGIN, fy, CW, C.navy, 1);
 
-  const sigLineY = footerY + 28;
+  const sigW   = CW * 0.32;
+  const stampW = 52;
+  const gap    = (CW - sigW * 2 - stampW) / 2;
+  const sig1X  = MARGIN;
+  const stampX = MARGIN + sigW + gap;
+  const sig2X  = stampX + stampW + gap;
+  const lineY  = fy + 34;
 
-  doc.moveTo(MARGIN, sigLineY).lineTo(MARGIN + sigW, sigLineY)
-     .lineWidth(0.6).strokeColor(C.darkGray).stroke();
-  doc.font('Amharic-Bold').fontSize(5.5).fillColor(C.darkGray)
-     .text('Registrar Signature / ሬጅስትራር ፊርማ', MARGIN, sigLineY + 2, { width: sigW, align: 'center' });
+  // Signature lines
+  hline(doc, sig1X, lineY, sigW, C.darkGray, 0.7);
+  doc.font('Bold').fontSize(6).fillColor(C.darkGray)
+     .text('Registrar / ሬጅስትራር', sig1X, lineY + 3, { width: sigW, align: 'center' });
 
-  // Stamp circle (solid)
-  const stampCX = stampX + stampW / 2;
-  const stampCY = footerY + 22;
-  doc.circle(stampCX, stampCY, stampW / 2 - 2)
-     .lineWidth(0.8).strokeColor('#f44336').stroke();
-  doc.font('Amharic-Bold').fontSize(4.5).fillColor('#f44336')
-     .text('OFFICIAL\nSTAMP\nማህተም', stampCX - 14, stampCY - 9, { width: 28, align: 'center' });
+  // Stamp
+  const cx = stampX + stampW / 2;
+  const cy = fy + 26;
+  doc.circle(cx, cy, stampW / 2 - 2).lineWidth(1).strokeColor(C.red).stroke();
+  doc.circle(cx, cy, stampW / 2 - 6).lineWidth(0.5).strokeColor(C.red).stroke();
+  doc.font('Bold').fontSize(5.5).fillColor(C.red)
+     .text('OFFICIAL\nSTAMP\nማህተም', cx - 14, cy - 10, { width: 28, align: 'center' });
 
-  doc.moveTo(sigRX, sigLineY).lineTo(sigRX + sigW, sigLineY)
-     .lineWidth(0.6).strokeColor(C.darkGray).stroke();
-  doc.font('Amharic-Bold').fontSize(5.5).fillColor(C.darkGray)
-     .text('Kebele Manager / ሥራ አስኪያጅ ፊርማ', sigRX, sigLineY + 2, { width: sigW, align: 'center' });
+  hline(doc, sig2X, lineY, sigW, C.darkGray, 0.7);
+  doc.font('Bold').fontSize(6).fillColor(C.darkGray)
+     .text('Kebele Manager / ሥራ አስኪያጅ', sig2X, lineY + 3, { width: sigW, align: 'center' });
 
-  const warnY = footerY + 42;
-  doc.font('Amharic-Regular').fontSize(5).fillColor(C.darkGray)
+  // Issue date + warning
+  doc.font('Regular').fontSize(5.5).fillColor(C.midGray)
+     .text(`Issue Date: ${fmtDate(data.issueDate)}`, MARGIN, fy + 54, { width: CW / 2, align: 'left' });
+  doc.font('Regular').fontSize(5.5).fillColor(C.midGray)
      .text(
-       'This certificate is valid only with official stamp and signature. / ' +
-       'ይህ ምስክር ወረቀት የሚፀናው ኦፊሴላዊ ማህተም እና ፊርማዎች ሲኖሩት ብቻ ነው።',
-       MARGIN, warnY,
-       { width: CONTENT_W, align: 'center' }
+       'This document is valid only with official stamp and authorised signatures.',
+       MARGIN + CW / 2, fy + 54,
+       { width: CW / 2, align: 'right' }
      );
 }
 
-// ─── MAIN ENTRY POINT ────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+// CERTIFICATE-SPECIFIC RENDERERS
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── BIRTH ──────────────────────────────────────────────────────────────────
+function renderBirth(doc, data, startY) {
+  let y = startY;
+
+  // Child photo + child details (two-column top)
+  const photoW = 90, photoH = 110;
+  const infoX  = MARGIN + photoW + 12;
+  const infoW  = CW - photoW - 12;
+
+  imageBox(doc, MARGIN, y, photoW, photoH, data.childPhotoPath, 'Child / ልጅ');
+
+  // Child info panel
+  const lw = infoW * 0.42;
+  let iy = y;
+  const childRows = [
+    ["Child's Full Name / የልጅ ሙሉ ስም", s(data.childName)],
+    ['Gender / ጾታ',                     s(data.childGender || data.gender)],
+    ['Date of Birth / ልደት ቀን',         fmtDate(data.childBirthDate)],
+    ['Place of Birth / ልደት ቦታ',        s(data.childBirthplace)],
+    ["Father's Name / አባት ስም",          s(data.fatherName)],
+    ["Mother's Name / እናት ስም",          s(data.motherName)],
+    ['Registration Date / ምዝገባ',        fmtDate(data.registrationDate)],
+  ];
+  childRows.forEach(([label, value]) => {
+    if (iy > MAX_Y) return;
+    doc.font('Bold').fontSize(7).fillColor(C.navy)
+       .text(label + ':', infoX, iy, { width: lw, lineBreak: false, ellipsis: true });
+    doc.font('Regular').fontSize(7).fillColor(C.black)
+       .text(value, infoX + lw + 4, iy, { width: infoW - lw - 4, lineBreak: false, ellipsis: true });
+    iy += 12;
+  });
+
+  y = Math.max(y + photoH, iy) + 10;
+  hline(doc, MARGIN, y, CW, C.gray); y += 8;
+
+  // Registrant (parent) info
+  y = sectionBanner(doc, 'Registrant Information / ዘጋቢ መረጃ', y);
+  y = doubleRow(doc, 'Full Name / ሙሉ ስም', s(data.fullName), 'Phone / ስልክ', s(data.phone), y);
+  y = doubleRow(doc, 'Occupation / ሥራ', s(data.occupation), 'Address / አድራሻ', s(data.fullAddress || data.kebele), y);
+
+  return y + 8;
+}
+
+// ── MARRIAGE ──────────────────────────────────────────────────────────────
+function renderMarriage(doc, data, startY) {
+  let y = startY;
+
+  // Marriage event info
+  y = sectionBanner(doc, 'Marriage Details / የጋብቻ ዝርዝር', y);
+
+  const mRows = [
+    ['Marriage Date / ጋብቻ ቀን',   fmtDate(data.marriageDate)],
+    ['Marriage Place / ጋብቻ ቦታ',  s(data.marriagePlace)],
+    ['Witness / ምስክር',            s(data.witnessName)],
+    ['Registration Date / ምዝገባ',  fmtDate(data.registrationDate)],
+  ];
+  mRows.forEach(([label, val]) => {
+    if (y > MAX_Y) return;
+    y = fieldRow(doc, label, val, MARGIN, y, CW * 0.35, CW);
+  });
+
+  y += 10;
+  hline(doc, MARGIN, y, CW, C.navy, 0.8); y += 8;
+
+  // Side-by-side: Husband | Wife
+  const colW  = CW / 2 - 8;
+  const col2X = MARGIN + colW + 16;
+
+  // Column headers
+  doc.rect(MARGIN, y, colW, 16).fill('#0d1b3e');
+  doc.rect(col2X, y, colW, 16).fill('#6b21a8');
+  doc.font('Bold').fontSize(8).fillColor(C.white)
+     .text('HUSBAND / ባል', MARGIN, y + 4, { width: colW, align: 'center' });
+  doc.font('Bold').fontSize(8).fillColor(C.white)
+     .text('WIFE / ሚስት', col2X, y + 4, { width: colW, align: 'center' });
+  y += 20;
+
+  // Photos
+  const photoH = 90;
+  const photoW = 72;
+  imageBox(doc, MARGIN, y, photoW, photoH, data.husbandPhotoPath, 'ባል');
+  imageBox(doc, col2X,  y, photoW, photoH, data.wifePhotoPath,    'ሚስት');
+
+  // Details next to photos
+  const hInfoX = MARGIN + photoW + 6;
+  const hInfoW = colW - photoW - 6;
+  const wInfoX = col2X  + photoW + 6;
+  const wInfoW = colW   - photoW - 6;
+  const lw = hInfoW * 0.44;
+
+  let hy = y;
+  let wy = y;
+
+  const husbandFields = [
+    ['Full Name / ስም',   s(data.husbandName)],
+    ['Birth Date / ልደት', fmtDate(data.husbandBirthDate)],
+    ['Birthplace / ቦታ',  s(data.husbandBirthPlace)],
+    ['ID / ቁጥር',         s(data.certificateNumber)],
+  ];
+  const wifeFields = [
+    ['Full Name / ስም',   s(data.wifeName)],
+    ['Birth Date / ልደት', fmtDate(data.wifeBirthDate)],
+    ['Birthplace / ቦታ',  s(data.wifeBirthPlace)],
+    ['ID / ቁጥር',         s(data.certificateNumber)],
+  ];
+
+  husbandFields.forEach(([label, val]) => {
+    if (hy > MAX_Y) return;
+    doc.font('Bold').fontSize(6.5).fillColor(C.navy)
+       .text(label + ':', hInfoX, hy, { width: lw, lineBreak: false, ellipsis: true });
+    doc.font('Regular').fontSize(6.5).fillColor(C.black)
+       .text(val, hInfoX + lw + 3, hy, { width: hInfoW - lw - 3, lineBreak: false, ellipsis: true });
+    hy += 11;
+  });
+
+  const lw2 = wInfoW * 0.44;
+  wifeFields.forEach(([label, val]) => {
+    if (wy > MAX_Y) return;
+    doc.font('Bold').fontSize(6.5).fillColor('#6b21a8')
+       .text(label + ':', wInfoX, wy, { width: lw2, lineBreak: false, ellipsis: true });
+    doc.font('Regular').fontSize(6.5).fillColor(C.black)
+       .text(val, wInfoX + lw2 + 3, wy, { width: wInfoW - lw2 - 3, lineBreak: false, ellipsis: true });
+    wy += 11;
+  });
+
+  y = Math.max(y + photoH, hy, wy) + 12;
+
+  // Vertical divider between columns
+  doc.moveTo(MARGIN + colW + 8, startY + 30)
+     .lineTo(MARGIN + colW + 8, y - 4)
+     .lineWidth(0.5).strokeColor(C.gray).stroke();
+
+  hline(doc, MARGIN, y, CW, C.gray); y += 8;
+
+  // Registrant
+  y = sectionBanner(doc, 'Registered By / ዘጋቢ', y);
+  y = doubleRow(doc, 'Name / ስም', s(data.fullName), 'Phone / ስልክ', s(data.phone), y);
+
+  return y + 8;
+}
+
+// ── DEATH ────────────────────────────────────────────────────────────────
+function renderDeath(doc, data, startY) {
+  let y = startY;
+
+  // Deceased photo + details side by side
+  const photoW = 90, photoH = 110;
+  const infoX  = MARGIN + photoW + 12;
+  const infoW  = CW - photoW - 12;
+  const lw     = infoW * 0.42;
+
+  imageBox(doc, MARGIN, y, photoW, photoH, data.deceasedPhotoPath, 'Deceased / ሟቹ');
+
+  let iy = y;
+  const deceasedRows = [
+    ['Deceased Name / ሟቹ ስም',         s(data.deceasedName || data.childName)],
+    ['Date of Death / የሞት ቀን',        fmtDate(data.deathDate)],
+    ['Place of Death / የሞት ቦታ',       s(data.deathPlace)],
+    ['Cause of Death / የሞት ምክንያት',   s(data.causeOfDeath)],
+    ['Manner of Death / ሁኔታ',         s(data.mannerOfDeath)],
+    ['Registration Date / ምዝገባ',      fmtDate(data.registrationDate)],
+  ];
+  deceasedRows.forEach(([label, value]) => {
+    if (iy > MAX_Y) return;
+    doc.font('Bold').fontSize(7).fillColor(C.navy)
+       .text(label + ':', infoX, iy, { width: lw, lineBreak: false, ellipsis: true });
+    doc.font('Regular').fontSize(7).fillColor(C.black)
+       .text(value, infoX + lw + 4, iy, { width: infoW - lw - 4, lineBreak: false, ellipsis: true });
+    iy += 12;
+  });
+
+  y = Math.max(y + photoH, iy) + 10;
+  hline(doc, MARGIN, y, CW, C.gray); y += 8;
+
+  // Reporter / Registrant
+  y = sectionBanner(doc, 'Reported By / ዘጋቢ', y);
+  y = doubleRow(doc, 'Reporter Name / ዘጋቢ ስም', s(data.fullName), 'Phone / ስልክ', s(data.phone), y);
+  y = doubleRow(doc, 'Occupation / ሥራ', s(data.occupation), 'Address / አድራሻ', s(data.fullAddress || data.kebele), y);
+
+  return y + 8;
+}
+
+// ── RESIDENCY / ID ───────────────────────────────────────────────────────
+function renderResidency(doc, data, startY) {
+  let y = startY;
+
+  // Photo + personal info side by side
+  const photoW = 100, photoH = 126;
+  const infoX  = MARGIN + photoW + 14;
+  const infoW  = CW - photoW - 14;
+  const lw     = infoW * 0.42;
+
+  imageBox(doc, MARGIN, y, photoW, photoH, data.photoPath, 'Photo / ፎቶ');
+
+  let iy = y;
+  const personalRows = [
+    ['Full Name / ሙሉ ስም',        s(data.fullName)],
+    ['Gender / ጾታ',              s(data.gender)],
+    ['Date of Birth / ልደት ቀን',  fmtDate(data.birthDate)],
+    ['Birthplace / ትውልድ ቦታ',   s(data.birthPlace)],
+    ['Nationality / ዜግነት',       s(data.nationality)],
+    ['Religion / ሃይማኖት',        s(data.religion)],
+    ['Marital Status / ጋብቻ',    s(data.maritalStatus)],
+    ['Disability / አካል ጉዳት',    data.disabilityStatus ? 'Yes / አዎ' : 'No / የለም'],
+  ];
+  personalRows.forEach(([label, value]) => {
+    if (iy > MAX_Y) return;
+    doc.font('Bold').fontSize(7).fillColor(C.navy)
+       .text(label + ':', infoX, iy, { width: lw, lineBreak: false, ellipsis: true });
+    doc.font('Regular').fontSize(7).fillColor(C.black)
+       .text(value, infoX + lw + 4, iy, { width: infoW - lw - 4, lineBreak: false, ellipsis: true });
+    iy += 11;
+  });
+
+  y = Math.max(y + photoH, iy) + 10;
+  hline(doc, MARGIN, y, CW, C.gray); y += 8;
+
+  // Family info
+  y = sectionBanner(doc, 'Family Information / የቤተሰብ መረጃ', y);
+  y = doubleRow(doc, "Father's Name / አባት",      s(data.fatherName), "Mother's Name / እናት",  s(data.motherName), y);
+  if (data.maritalStatus && data.maritalStatus.toLowerCase() === 'married') {
+    y = fieldRow(doc, 'Spouse Name / የትዳር አጋር', s(data.spouseName), MARGIN, y, CW * 0.35, CW);
+    y += 2;
+  }
+
+  hline(doc, MARGIN, y, CW, C.gray); y += 8;
+
+  // Address
+  y = sectionBanner(doc, 'Address / አድራሻ', y);
+  y = doubleRow(doc, 'Region / ክልል', s(data.region), 'Zone / ዞን', s(data.zone), y);
+  y = doubleRow(doc, 'Woreda / ወረዳ', s(data.woreda), 'Kebele / ቀበሌ', s(data.kebele), y);
+  y = doubleRow(doc, 'House No / ቤት ቁጥር', s(data.houseNumber), 'Full Address / አድራሻ', s(data.fullAddress), y);
+
+  hline(doc, MARGIN, y, CW, C.gray); y += 8;
+
+  // Work & Contact
+  y = sectionBanner(doc, 'Contact & Work / ግንኙነት እና ሥራ', y);
+  y = doubleRow(doc, 'Phone / ስልክ', s(data.phone), 'Occupation / ሥራ', s(data.occupation), y);
+  y = doubleRow(doc, 'Education / ትምህርት', s(data.education), 'Emergency Contact / አደጋ', s(data.emergencyContact), y);
+
+  hline(doc, MARGIN, y, CW, C.gray); y += 8;
+
+  // Card validity
+  y = sectionBanner(doc, 'Card Validity / የካርዱ ፀናነት', y);
+  y = doubleRow(doc, 'Reg. Date / ምዝገባ', fmtDate(data.registrationDate), 'Issue Date / የተሰጠበት', fmtDate(data.issueDate), y);
+  y = fieldRow(doc, 'Expiry Date / የሚያበቃበት', fmtDate(data.expiryDate), MARGIN, y, CW * 0.35, CW);
+
+  return y + 8;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MAIN ENTRY POINT
+// ════════════════════════════════════════════════════════════════════════════
 const generateCertificate = (rawCert, writable) => {
-  // 1. Validate & Sanitize data against schema
-  // This explicitly strips HTML, zero-width chars, and enforces required fields.
   const data = validateAndSanitize(rawCert);
 
   const doc = new PDFDocument({
-    size:    [A5_W, A5_H],
-    margin:  0,
+    size:   [A4_W, A4_H],
+    margin: 0,
     info: {
       Title:   `${data.certificateType.toUpperCase()} — Heremata Mentina Kebele`,
       Author:  'Heremata Mentina Kebele Administration',
@@ -413,27 +469,24 @@ const generateCertificate = (rawCert, writable) => {
 
   doc.pipe(writable);
 
-  const fontRegular = path.join(__dirname, '..', 'assets', 'fonts', 'NotoSansEthiopic-Regular.ttf');
-  const fontBold = path.join(__dirname, '..', 'assets', 'fonts', 'NotoSansEthiopic-Bold.ttf');
-  
-  doc.registerFont('Amharic-Regular', fontRegular);
-  doc.registerFont('Amharic-Bold', fontBold);
+  const fontDir      = path.join(__dirname, '..', 'assets', 'fonts');
+  const fontRegular  = path.join(fontDir, 'NotoSansEthiopic-Regular.ttf');
+  const fontBold     = path.join(fontDir, 'NotoSansEthiopic-Bold.ttf');
+  doc.registerFont('Regular', fontRegular);
+  doc.registerFont('Bold',    fontBold);
 
   drawWatermark(doc);
-  drawHeader(doc, data);
+  const contentStartY = drawHeader(doc, data);
 
-  let curY = 78;
+  let y = contentStartY;
 
-  // Render Base Schema Fields
-  curY = drawSchemaFields(doc, BASE_SCHEMA, data, curY);
+  const type = data.certificateType;
+  if      (type === 'birth')                             y = renderBirth(doc, data, y);
+  else if (type === 'marriage')                          y = renderMarriage(doc, data, y);
+  else if (type === 'death')                             y = renderDeath(doc, data, y);
+  else if (type === 'residency-id' || type === 'residency') y = renderResidency(doc, data, y);
 
-  // Render Certificate-Specific Fields
-  const specificSchema = SPECIFIC_SCHEMA[data.certificateType];
-  if (specificSchema) {
-    curY = drawSchemaFields(doc, specificSchema, data, curY);
-  }
-
-  drawFooter(doc);
+  drawFooter(doc, data);
   doc.end();
 };
 
