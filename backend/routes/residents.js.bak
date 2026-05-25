@@ -268,34 +268,6 @@ router.post(
 );
 
 // Put generic route LAST
-
-// =======================
-// IMAGE SERVING (for preview and PDF rendering)
-// =======================
-
-// Serve certificate images by path
-router.get('/images/:filename', (req, res) => {
-  const filename = req.params.filename;
-  
-  // Security: Only allow serving from certificates/images directory
-  if (filename.includes('..') || filename.includes('/')) {
-    return res.status(403).json({ error: 'Invalid filename' });
-  }
-
-  const imagePath = path.join(CERT_IMAGE_UPLOAD_DIR, filename);
-  
-  try {
-    if (!fs.existsSync(imagePath)) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-    
-    res.sendFile(imagePath);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to serve image' });
-  }
-});
-
-// Put generic route LAST
 router.get('/:id', getResidentById);
 
 module.exports = router;

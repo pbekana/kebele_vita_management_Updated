@@ -42,48 +42,75 @@ function hline(doc, x, y, w, color = C.gray, lw = 0.5) {
   doc.moveTo(x, y).lineTo(x + w, y).lineWidth(lw).strokeColor(color).stroke();
 }
 
-function sectionBanner(doc, title, y) {
+function ensurePageSpace(doc, y, heightNeeded, data) {
+  if (y + heightNeeded > MAX_Y) {
+    doc.addPage();
+    drawWatermark(doc);
+    return drawHeader(doc, data);
+  }
+  return y;
+}
+
+function sectionBanner(doc, title, y, data) {
+  y = ensurePageSpace(doc, y, 30, data);
   doc.rect(MARGIN, y, CW, 14).fill('#e8edf8');
   doc.font('Bold').fontSize(7.5).fillColor(C.navy)
-     .text(title.toUpperCase(), MARGIN + 6, y + 3, { width: CW - 12, lineBreak: false });
+     .text(title.toUpperCase(), MARGIN + 6, y + 3, { width: CW - 12, lineBreak: true });
   return y + 18;
 }
 
 // Two-column field row: label on left, value on right
-function fieldRow(doc, label, value, x, y, labelW, fieldW) {
+function fieldRow(doc, label, value, x, y, labelW, fieldW, data) {
   const valStr = s(value);
-  doc.font('Bold').fontSize(7).fillColor(C.navy)
-     .text(label + ':', x, y, { width: labelW, lineBreak: false, ellipsis: true });
-  doc.font('Regular').fontSize(7).fillColor(C.black)
-     .text(valStr, x + labelW + 4, y, { width: fieldW - labelW - 4, lineBreak: false, ellipsis: true });
-  return y + 11;
+  doc.font('Bold').fontSize(7).fillColor(C.navy);
+  const labelHeight = doc.heightOfString(label + ':', { width: labelW, lineBreak: true });
+  doc.text(label + ':', x, y, { width: labelW, lineBreak: true });
+
+  doc.font('Regular').fontSize(7).fillColor(C.black);
+  const valueHeight = doc.heightOfString(valStr, { width: fieldW - labelW - 4, lineBreak: true });
+  doc.text(valStr, x + labelW + 4, y, { width: fieldW - labelW - 4, lineBreak: true });
+
+  return Math.max(labelHeight, valueHeight) + 8;
 }
 
 // Two fields side by side
-function doubleRow(doc, f1, v1, f2, v2, y) {
+function doubleRow(doc, f1, v1, f2, v2, y, data) {
   const half = CW / 2 - 6;
   const lw   = half * 0.44;
-  fieldRow(doc, f1, v1, MARGIN,           y, lw, half);
-  fieldRow(doc, f2, v2, MARGIN + half + 12, y, lw, half);
-  return y + 11;
+  const leftHeight  = fieldRow(doc, f1, v1, MARGIN,           y, lw, half, data);
+  const rightHeight = fieldRow(doc, f2, v2, MARGIN + half + 12, y, lw, half, data);
+  return y + Math.max(leftHeight, rightHeight);
 }
 
 // ─── Image box ────────────────────────────────────────────────────────────
 function imageBox(doc, x, y, w, h, photoPath, caption) {
   doc.rect(x, y, w, h).lineWidth(0.5).strokeColor(C.gray).stroke();
   let drawn = false;
-  if (photoPath && photoPath !== 'null' && photoPath !== 'undefined') {
-    const abs = path.isAbsolute(photoPath)
-      ? photoPath
-      : path.join(__dirname, '..', photoPath);
+  
+  if (photoPath && photoPath !== 'null' && photoPath !== 'undefined' && photoPath !== '') {
     try {
+      const abs = path.isAbsolute(photoPath)
+        ? photoPath
+        : path.join(__dirname, '..', photoPath);
+      
+      // Verify file exists before attempting to embed
       if (fs.existsSync(abs)) {
-        doc.image(abs, x + 1, y + 1, { width: w - 2, height: h - 2, cover: [w - 2, h - 2] });
+        doc.image(abs, x + 1, y + 1, { 
+          width: w - 2, 
+          height: h - 2, 
+          cover: [w - 2, h - 2],
+          fit: [w - 2, h - 2]
+        });
         drawn = true;
       }
-    } catch (_) {}
+    } catch (err) {
+      // Image loading failed, fall back to placeholder
+      console.warn(`Failed to load image from ${photoPath}:`, err.message);
+    }
   }
+  
   if (!drawn) {
+    // Render placeholder if no image available
     doc.font('Regular').fontSize(6).fillColor(C.darkGray)
        .text(`👤\n3×4\n${caption}`, x, y + h / 2 - 10, { width: w, align: 'center' });
   }
@@ -210,6 +237,7 @@ function renderBirth(doc, data, startY) {
   const infoX  = MARGIN + photoW + 12;
   const infoW  = CW - photoW - 12;
 
+  y = ensurePageSpace(doc, y, photoH + 28, data);
   imageBox(doc, MARGIN, y, photoW, photoH, data.childPhotoPath, 'Child / ልጅ');
 
   // Child info panel
@@ -237,9 +265,9 @@ function renderBirth(doc, data, startY) {
   hline(doc, MARGIN, y, CW, C.gray); y += 8;
 
   // Registrant (parent) info
-  y = sectionBanner(doc, 'Registrant Information / ዘጋቢ መረጃ', y);
-  y = doubleRow(doc, 'Full Name / ሙሉ ስም', s(data.fullName), 'Phone / ስልክ', s(data.phone), y);
-  y = doubleRow(doc, 'Occupation / ሥራ', s(data.occupation), 'Address / አድራሻ', s(data.fullAddress || data.kebele), y);
+  y = sectionBanner(doc, 'Registrant Information / ዘጋቢ መረጃ', y, data);
+  y = doubleRow(doc, 'Full Name / ሙሉ ስም', s(data.fullName), 'Phone / ስልክ', s(data.phone), y, data);
+  y = doubleRow(doc, 'Occupation / ሥራ', s(data.occupation), 'Address / አድራሻ', s(data.fullAddress || data.kebele), y, data);
 
   return y + 8;
 }
@@ -249,7 +277,7 @@ function renderMarriage(doc, data, startY) {
   let y = startY;
 
   // Marriage event info
-  y = sectionBanner(doc, 'Marriage Details / የጋብቻ ዝርዝር', y);
+  y = sectionBanner(doc, 'Marriage Details / የጋብቻ ዝርዝር', y, data);
 
   const mRows = [
     ['Marriage Date / ጋብቻ ቀን',   fmtDate(data.marriageDate)],
@@ -259,7 +287,8 @@ function renderMarriage(doc, data, startY) {
   ];
   mRows.forEach(([label, val]) => {
     if (y > MAX_Y) return;
-    y = fieldRow(doc, label, val, MARGIN, y, CW * 0.35, CW);
+    const rowHeight = fieldRow(doc, label, val, MARGIN, y, CW * 0.35, CW, data);
+    y += rowHeight;
   });
 
   y += 10;
@@ -281,6 +310,7 @@ function renderMarriage(doc, data, startY) {
   // Photos
   const photoH = 90;
   const photoW = 72;
+  y = ensurePageSpace(doc, y, photoH + 30, data);
   imageBox(doc, MARGIN, y, photoW, photoH, data.husbandPhotoPath, 'ባል');
   imageBox(doc, col2X,  y, photoW, photoH, data.wifePhotoPath,    'ሚስት');
 
@@ -308,22 +338,14 @@ function renderMarriage(doc, data, startY) {
   ];
 
   husbandFields.forEach(([label, val]) => {
-    if (hy > MAX_Y) return;
-    doc.font('Bold').fontSize(6.5).fillColor(C.navy)
-       .text(label + ':', hInfoX, hy, { width: lw, lineBreak: false, ellipsis: true });
-    doc.font('Regular').fontSize(6.5).fillColor(C.black)
-       .text(val, hInfoX + lw + 3, hy, { width: hInfoW - lw - 3, lineBreak: false, ellipsis: true });
-    hy += 11;
+    const rowHeight = fieldRow(doc, label, val, hInfoX, hy, lw, hInfoW, data);
+    hy += rowHeight;
   });
 
   const lw2 = wInfoW * 0.44;
   wifeFields.forEach(([label, val]) => {
-    if (wy > MAX_Y) return;
-    doc.font('Bold').fontSize(6.5).fillColor('#6b21a8')
-       .text(label + ':', wInfoX, wy, { width: lw2, lineBreak: false, ellipsis: true });
-    doc.font('Regular').fontSize(6.5).fillColor(C.black)
-       .text(val, wInfoX + lw2 + 3, wy, { width: wInfoW - lw2 - 3, lineBreak: false, ellipsis: true });
-    wy += 11;
+    const rowHeight = fieldRow(doc, label, val, wInfoX, wy, lw2, wInfoW, data);
+    wy += rowHeight;
   });
 
   y = Math.max(y + photoH, hy, wy) + 12;
@@ -336,8 +358,8 @@ function renderMarriage(doc, data, startY) {
   hline(doc, MARGIN, y, CW, C.gray); y += 8;
 
   // Registrant
-  y = sectionBanner(doc, 'Registered By / ዘጋቢ', y);
-  y = doubleRow(doc, 'Name / ስም', s(data.fullName), 'Phone / ስልክ', s(data.phone), y);
+  y = sectionBanner(doc, 'Registered By / ዘጋቢ', y, data);
+  y = doubleRow(doc, 'Name / ስም', s(data.fullName), 'Phone / ስልክ', s(data.phone), y, data);
 
   return y + 8;
 }
@@ -364,21 +386,17 @@ function renderDeath(doc, data, startY) {
     ['Registration Date / ምዝገባ',      fmtDate(data.registrationDate)],
   ];
   deceasedRows.forEach(([label, value]) => {
-    if (iy > MAX_Y) return;
-    doc.font('Bold').fontSize(7).fillColor(C.navy)
-       .text(label + ':', infoX, iy, { width: lw, lineBreak: false, ellipsis: true });
-    doc.font('Regular').fontSize(7).fillColor(C.black)
-       .text(value, infoX + lw + 4, iy, { width: infoW - lw - 4, lineBreak: false, ellipsis: true });
-    iy += 12;
+    const rowHeight = fieldRow(doc, label, value, infoX, iy, lw, infoW, data);
+    iy += rowHeight;
   });
 
   y = Math.max(y + photoH, iy) + 10;
   hline(doc, MARGIN, y, CW, C.gray); y += 8;
 
   // Reporter / Registrant
-  y = sectionBanner(doc, 'Reported By / ዘጋቢ', y);
-  y = doubleRow(doc, 'Reporter Name / ዘጋቢ ስም', s(data.fullName), 'Phone / ስልክ', s(data.phone), y);
-  y = doubleRow(doc, 'Occupation / ሥራ', s(data.occupation), 'Address / አድራሻ', s(data.fullAddress || data.kebele), y);
+  y = sectionBanner(doc, 'Reported By / ዘጋቢ', y, data);
+  y = doubleRow(doc, 'Reporter Name / ዘጋቢ ስም', s(data.fullName), 'Phone / ስልክ', s(data.phone), y, data);
+  y = doubleRow(doc, 'Occupation / ሥራ', s(data.occupation), 'Address / አድራሻ', s(data.fullAddress || data.kebele), y, data);
 
   return y + 8;
 }
@@ -407,46 +425,43 @@ function renderResidency(doc, data, startY) {
     ['Disability / አካል ጉዳት',    data.disabilityStatus ? 'Yes / አዎ' : 'No / የለም'],
   ];
   personalRows.forEach(([label, value]) => {
-    if (iy > MAX_Y) return;
-    doc.font('Bold').fontSize(7).fillColor(C.navy)
-       .text(label + ':', infoX, iy, { width: lw, lineBreak: false, ellipsis: true });
-    doc.font('Regular').fontSize(7).fillColor(C.black)
-       .text(value, infoX + lw + 4, iy, { width: infoW - lw - 4, lineBreak: false, ellipsis: true });
-    iy += 11;
+    const rowHeight = fieldRow(doc, label, value, infoX, iy, lw, infoW, data);
+    iy += rowHeight;
   });
 
   y = Math.max(y + photoH, iy) + 10;
   hline(doc, MARGIN, y, CW, C.gray); y += 8;
 
   // Family info
-  y = sectionBanner(doc, 'Family Information / የቤተሰብ መረጃ', y);
-  y = doubleRow(doc, "Father's Name / አባት",      s(data.fatherName), "Mother's Name / እናት",  s(data.motherName), y);
+  y = sectionBanner(doc, 'Family Information / የቤተሰብ መረጃ', y, data);
+  y = doubleRow(doc, "Father's Name / አባት",      s(data.fatherName), "Mother's Name / እናት",  s(data.motherName), y, data);
   if (data.maritalStatus && data.maritalStatus.toLowerCase() === 'married') {
-    y = fieldRow(doc, 'Spouse Name / የትዳር አጋር', s(data.spouseName), MARGIN, y, CW * 0.35, CW);
-    y += 2;
+    const rowHeight = fieldRow(doc, 'Spouse Name / የትዳር አጋር', s(data.spouseName), MARGIN, y, CW * 0.35, CW, data);
+    y += rowHeight + 2;
   }
 
   hline(doc, MARGIN, y, CW, C.gray); y += 8;
 
   // Address
-  y = sectionBanner(doc, 'Address / አድራሻ', y);
-  y = doubleRow(doc, 'Region / ክልል', s(data.region), 'Zone / ዞን', s(data.zone), y);
-  y = doubleRow(doc, 'Woreda / ወረዳ', s(data.woreda), 'Kebele / ቀበሌ', s(data.kebele), y);
-  y = doubleRow(doc, 'House No / ቤት ቁጥር', s(data.houseNumber), 'Full Address / አድራሻ', s(data.fullAddress), y);
+  y = sectionBanner(doc, 'Address / አድራሻ', y, data);
+  y = doubleRow(doc, 'Region / ክልል', s(data.region), 'Zone / ዞን', s(data.zone), y, data);
+  y = doubleRow(doc, 'Woreda / ወረዳ', s(data.woreda), 'Kebele / ቀበሌ', s(data.kebele), y, data);
+  y = doubleRow(doc, 'House No / ቤት ቁጥር', s(data.houseNumber), 'Full Address / አድራሻ', s(data.fullAddress), y, data);
 
   hline(doc, MARGIN, y, CW, C.gray); y += 8;
 
   // Work & Contact
-  y = sectionBanner(doc, 'Contact & Work / ግንኙነት እና ሥራ', y);
-  y = doubleRow(doc, 'Phone / ስልክ', s(data.phone), 'Occupation / ሥራ', s(data.occupation), y);
-  y = doubleRow(doc, 'Education / ትምህርት', s(data.education), 'Emergency Contact / አደጋ', s(data.emergencyContact), y);
+  y = sectionBanner(doc, 'Contact & Work / ግንኙነት እና ሥራ', y, data);
+  y = doubleRow(doc, 'Phone / ስልክ', s(data.phone), 'Occupation / ሥራ', s(data.occupation), y, data);
+  y = doubleRow(doc, 'Education / ትምህርት', s(data.education), 'Emergency Contact / አደጋ', s(data.emergencyContact), y, data);
 
   hline(doc, MARGIN, y, CW, C.gray); y += 8;
 
   // Card validity
-  y = sectionBanner(doc, 'Card Validity / የካርዱ ፀናነት', y);
-  y = doubleRow(doc, 'Reg. Date / ምዝገባ', fmtDate(data.registrationDate), 'Issue Date / የተሰጠበት', fmtDate(data.issueDate), y);
-  y = fieldRow(doc, 'Expiry Date / የሚያበቃበት', fmtDate(data.expiryDate), MARGIN, y, CW * 0.35, CW);
+  y = sectionBanner(doc, 'Card Validity / የካርዱ ፀናነት', y, data);
+  y = doubleRow(doc, 'Reg. Date / ምዝገባ', fmtDate(data.registrationDate), 'Issue Date / የተሰጠበት', fmtDate(data.issueDate), y, data);
+  const expiryHeight = fieldRow(doc, 'Expiry Date / የሚያበቃበት', fmtDate(data.expiryDate), MARGIN, y, CW * 0.35, CW, data);
+  y += expiryHeight;
 
   return y + 8;
 }

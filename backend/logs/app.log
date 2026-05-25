@@ -330,3 +330,38 @@
 [2026-05-25T17:34:33.021Z] [ERROR] Error: Unknown column 'fr.family_member_id' in 'on clause'
 [2026-05-25T17:34:33.030Z] [ERROR] Error: Unknown column 'fr.family_member_id' in 'on clause'
 [2026-05-25T17:39:11.024Z] [INFO] Server running on port 5000
+[2026-05-25T18:04:19.660Z] [INFO] Server running on port 5000
+[2026-05-25T18:17:25.817Z] [INFO] Server running on port 5000
+[2026-05-25T18:56:40.360Z] [INFO] Server running on port 5000
+[2026-05-25T20:11:40.227Z] [INFO] Server running on port 5000
+[2026-05-25T20:12:55.294Z] [INFO] Certificate request 18 created by resident 7
+[2026-05-25T20:14:05.452Z] [INFO] Admin 1 assigned certificate 18 to staff 5
+[2026-05-25T20:16:54.139Z] [INFO] Admin 1 assigned task 12
+[2026-05-25T20:19:18.303Z] [INFO] Staff 5 prepared certificate 18 for admin approval
+[2026-05-25T20:20:05.375Z] [INFO] Admin 1 approved certificate 18
+[2026-05-25T20:38:40.689Z] [INFO] Server running on port 5000
+[2026-05-25T20:43:26.529Z] [INFO] Certificate request 19 created by resident 7
+[2026-05-25T20:45:28.009Z] [INFO] Admin 1 assigned task 13
+[2026-05-25T20:46:53.596Z] [INFO] Admin 1 assigned certificate 19 to staff 5
+[2026-05-25T20:47:45.886Z] [INFO] Staff 5 started task 13
+[2026-05-25T20:48:16.685Z] [INFO] Staff 5 prepared certificate 19 for admin approval
+[2026-05-25T20:49:03.895Z] [INFO] Admin 1 approved certificate 19
+[2026-05-25T20:51:37.606Z] [INFO] Certificate request 20 created by resident 7
+[2026-05-25T20:53:09.271Z] [INFO] Admin 1 assigned task 14
+[2026-05-25T20:54:57.097Z] [INFO] Admin 1 assigned certificate 20 to staff 2
+[2026-05-25T20:55:41.086Z] [INFO] Staff 2 prepared certificate 20 for admin approval
+[2026-05-25T20:56:06.103Z] [INFO] Admin 1 approved certificate 20
+[2026-05-25T21:12:30.666Z] [INFO] Server running on port 5000
+[2026-05-25T21:15:24.545Z] [INFO] Certificate request 21 created by resident 7
+[2026-05-25T21:16:23.664Z] [INFO] Admin 1 assigned task 15
+[2026-05-25T21:16:37.058Z] [INFO] Admin 1 assigned certificate 21 to staff 5
+[2026-05-25T21:56:59.219Z] [INFO] Server running on port 5000
+[2026-05-25T21:57:36.922Z] [INFO] Staff 5 prepared certificate 21 for admin approval
+[2026-05-25T21:57:55.381Z] [INFO] Admin 1 approved certificate 21
+[2026-05-25T21:58:23.766Z] [INFO] [PDF] Certificate ID: 21, Type: residency-id
+[2026-05-25T21:58:23.767Z] [INFO] [PDF] Resident: Gemechu Daba
+[2026-05-25T21:58:23.767Z] [INFO] [PDF] Phone: 0911223344, Occupation: Farmer
+[2026-05-25T21:58:23.768Z] [INFO] [PDF RESIDENCY] Gender: male, DOB: null, Birthplace: undefined
+[2026-05-25T21:58:23.768Z] [INFO] [PDF RESIDENCY] Father: Daba Gurmessa, Mother: Hawwe Boru, Spouse: Tigist Alemu
+[2026-05-25T21:58:23.768Z] [INFO] [PDF RESIDENCY] Address: Kebele 02, Jimma, H-101
+[2026-05-25T21:58:23.769Z] [INFO] [PDF] Calling generateCertificate with certificate object containing 65 fields

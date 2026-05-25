@@ -36,6 +36,10 @@ function validateAndSanitize(rawCert) {
     }
   }
 
+  console.log('[VALIDATOR] Input fields:', Object.keys(sData).slice(0, 20).join(', '));
+  console.log('[VALIDATOR] Resident name:', sData.resident_firstname, sData.resident_lastname);
+  console.log('[VALIDATOR] Certificate type:', sData.certificate_type);
+
   const certificateType = sData.certificate_type;
 
   // ── Full Name (requester/resident) ─────────────────────────────────────────
@@ -67,14 +71,17 @@ function validateAndSanitize(rawCert) {
 
   // ── Birth-specific: child data takes priority over resident birth fields ───
   // child_birth_date / child_birthplace are enriched in the controller
+  // Handle multiple field name variations from different sources
   const childBirthDate  = sData.child_birth_date  || null;
-  const childBirthplace = sData.child_birthplace   || null;
+  const childBirthplace = sData.child_birthplace   || sData.birth_place || null;
   const childGender     = sData.child_gender       || null;
   const childFullName   = sData.child_full_name    || sData.child_name || null;
 
   // ── Resident personal birth info (used for residency / personal section) ──
+  // Handle both naming conventions: resident_birth_date or birth_date
   const residentBirthDate  = sData.resident_birth_date  || sData.birth_date  || null;
-  const residentBirthplace = sData.resident_birthplace  || sData.birthplace  || null;
+  // Handle both naming conventions: resident_birthplace, birthplace, or birth_place
+  const residentBirthplace = sData.resident_birthplace  || sData.birthplace  || sData.birth_place || null;
 
   // ── Build unified validated schema object ──────────────────────────────────
   const validatedData = {
@@ -147,9 +154,9 @@ function validateAndSanitize(rawCert) {
     marriagePlace:    sData.marriage_place       || null,
     witnessName:      sData.witness_name         || null,
     husbandBirthDate: sData.husband_birth_date  || null,
-    husbandBirthPlace:sData.husband_birth_place || null,
+    husbandBirthPlace:sData.husband_birth_place || sData.husband_birthplace || null,
     wifeBirthDate:    sData.wife_birth_date      || null,
-    wifeBirthPlace:   sData.wife_birth_place     || null,
+    wifeBirthPlace:   sData.wife_birth_place     || sData.wife_birthplace || null,
   };
 
   // ── Expiry date for ID / residency ─────────────────────────────────────────

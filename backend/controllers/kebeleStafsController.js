@@ -23,7 +23,26 @@ async function loadAssignedCertificate(certId, staffUserId) {
     `SELECT
       c.*,
       r.firstname AS resident_firstname,
-      r.lastname AS resident_lastname
+      r.lastname AS resident_lastname,
+      r.gender,
+      r.birth_date AS resident_birth_date,
+      r.birthplace AS resident_birthplace,
+      r.marital_status,
+      r.father_name,
+      r.mother_name,
+      r.spouse_id,
+      r.phone_number,
+      r.occupation,
+      r.education_level,
+      r.address,
+      r.house_number,
+      r.emergency_contact_name,
+      r.emergency_contact_phone,
+      r.nationality,
+      r.religion,
+      r.disability_status,
+      r.photo_path,
+      r.registration_date
      FROM certificates c
      JOIN residents r ON c.resident_id = r.id
      WHERE c.id = ? AND c.assigned_staff_user_id = ?

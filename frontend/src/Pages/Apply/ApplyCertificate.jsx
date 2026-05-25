@@ -12,6 +12,13 @@ const ApplyCertificate = () => {
   const [formData, setFormData] = useState({
     existingIdNumber: "",
     applicantPhoto: null,
+    applicantPhotoPreview: null,
+    childPhoto: null,
+    childPhotoPreview: null,
+    husbandPhoto: null,
+    husbandPhotoPreview: null,
+    wifePhoto: null,
+    wifePhotoPreview: null,
     phone: "",
     additionalInfo: "",
     documents: []
@@ -40,7 +47,10 @@ const ApplyCertificate = () => {
   };
 
   const fetchCertificateData = async () => {
-    if (!applicationFor || !type) return;
+    if (!type) return;
+    const requiresSelection = type === 'birth' || type === 'residency-id' || type === 'residency';
+    if (requiresSelection && !applicationFor) return;
+
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       const response = await axios.get(
@@ -115,13 +125,13 @@ const ApplyCertificate = () => {
         addField({ label: 'Father Name', key: 'fatherName', value: `${backendData.resident.firstname} ${backendData.resident.lastname}`, required: false });
       }
 
-      uploadFields.push({ name: 'childPhoto', label: 'Child Photo', required: false, description: 'Optional child photo upload.' });
+      uploadFields.push({ name: 'childPhoto', label: '👶 Child Photo', required: false, description: 'Optional child photo (3×4 size recommended for certificate).' });
     } else if (type === 'birth' && applicationFor === 'myself') {
       addField({ label: 'Your Full Name', key: 'fullName', value: backendData?.resident ? `${backendData.resident.firstname} ${backendData.resident.lastname}` : '', required: true });
       addField({ label: 'Date of Birth', key: 'birthDate', value: formatDate(backendData?.resident?.birth_date), required: true });
       addField({ label: 'Place of Birth', key: 'birthPlace', value: backendData?.resident?.birthplace || '', required: true });
       addField({ label: 'Contact Phone', key: 'phone', value: backendData?.resident?.phone_number || '', required: true });
-      uploadFields.push({ name: 'applicantPhoto', label: 'Applicant Photo', required: true, description: 'Upload a photo for the certificate.' });
+      uploadFields.push({ name: 'applicantPhoto', label: '👤 Applicant Photo', required: false, description: 'Optional photo for your birth certificate (3×4 size recommended).' });
     } else if (type === 'marriage' && (backendData?.spouseData || backendData?.marriageRelationship)) {
       const resident  = backendData.resident;
       const spouse    = backendData.spouseData;
@@ -142,8 +152,8 @@ const ApplyCertificate = () => {
       addField({ label: 'Marriage Date / ጋብቻ ቀን',     key: 'marriageDate',  value: formatDate(marriage?.marriage_date), required: false });
       addField({ label: 'Marriage Place / ጋብቻ ቦታ',    key: 'marriagePlace', value: marriage?.marriage_place || '', required: false });
 
-      uploadFields.push({ name: 'husbandPhoto', label: 'Husband Photo / ባል ፎቶ', required: false, description: 'Optional photo upload.' });
-      uploadFields.push({ name: 'wifePhoto',    label: 'Wife Photo / ሚስት ፎቶ',  required: false, description: 'Optional photo upload.' });
+      uploadFields.push({ name: 'husbandPhoto', label: '💍 Husband Photo / ባል ፎቶ', required: false, description: 'Optional husband photo (3×4 size recommended).' });
+      uploadFields.push({ name: 'wifePhoto',    label: '💍 Wife Photo / ሚስት ፎቶ',  required: false, description: 'Optional wife photo (3×4 size recommended).' });
 
     } else if (type === 'death' && backendData?.deathReports?.length > 0) {
       const selectedReport = backendData.deathReports.find(d => d.id === selectedDeceasedId) || backendData.deathReports[0];
@@ -155,15 +165,14 @@ const ApplyCertificate = () => {
         addField({ label: 'Cause of Death', key: 'causeOfDeath', value: selectedReport?.cause_of_death, required: false });
         addField({ label: 'Place of Death', key: 'deathPlace', value: selectedReport?.place_of_death, required: false });
       }
-
-      uploadFields.push({ name: 'deceasedPhoto', label: 'Deceased Photo', required: true, description: 'Upload a photo for the deceased.' });
+      // NOTE: Death certificates do NOT include image uploads - per requirements
     } else if (type === 'residency-id' || type === 'residency') {
       addField({ label: 'Full Name', key: 'fullName', value: backendData?.resident ? `${backendData.resident.firstname} ${backendData.resident.lastname}` : '', required: true });
       if (applicationFor === 'renew') {
         addField({ label: 'Existing Residency ID Number', key: 'existingIdNumber', value: formData.existingIdNumber, required: true });
       }
       addField({ label: 'Contact Phone', key: 'phone', value: backendData?.resident?.phone_number || '', required: true });
-      uploadFields.push({ name: 'applicantPhoto', label: 'Applicant Photo', required: true, description: 'Upload a photo for your residency ID.' });
+      uploadFields.push({ name: 'applicantPhoto', label: '🪪 Resident Photo', required: false, description: 'Optional photo for your residency ID (3×4 size recommended for ID format).' });
     }
 
     return {
@@ -187,7 +196,32 @@ const ApplyCertificate = () => {
 
   const handleFileChange = (name) => (e) => {
     const file = e.target.files?.[0] || null;
-    setFormData(prev => ({ ...prev, [name]: file }));
+    if (file) {
+      // Create preview URL for image files
+      const previewKey = `${name}Preview`;
+      const previewUrl = URL.createObjectURL(file);
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: file,
+        [previewKey]: previewUrl
+      }));
+    } else {
+      const previewKey = `${name}Preview`;
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: null,
+        [previewKey]: null
+      }));
+    }
+  };
+
+  const removeImagePreview = (fieldName) => {
+    const previewKey = `${fieldName}Preview`;
+    setFormData(prev => ({
+      ...prev,
+      [fieldName]: null,
+      [previewKey]: null
+    }));
   };
 
   const addDocumentFiles = (e) => {
@@ -544,21 +578,41 @@ const ApplyCertificate = () => {
                     </div>
 
                     <div className="rounded-3xl border border-slate-200 p-5">
-                      <h2 className="text-lg font-semibold mb-4">Required uploads</h2>
-                      <div className="space-y-4">
+                      <h2 className="text-lg font-semibold mb-4">Certificate Photos</h2>
+                      <div className="space-y-6">
                         {previewData.uploadFields.map((file) => (
-                          <div key={file.name} className="space-y-2">
+                          <div key={file.name} className="space-y-3">
                             <label className="block text-sm font-medium">{file.label}</label>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleFileChange(file.name)}
-                              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-slate-100 file:text-slate-900 hover:file:bg-slate-200"
-                            />
-                            <p className="text-xs text-slate-500">{file.description}{file.required ? ' Required.' : ' Optional.'}</p>
-                            {formData[file.name] && (
-                              <p className="text-xs text-slate-700 mt-1">Selected file: {formData[file.name].name}</p>
-                            )}
+                            <div className="flex gap-4">
+                              <div className="flex-1">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleFileChange(file.name)}
+                                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-900 hover:file:bg-blue-200"
+                                />
+                                <p className="text-xs text-slate-500 mt-1">{file.description}{file.required ? ' Required.' : ' Optional.'}</p>
+                                {formData[file.name] && (
+                                  <p className="text-xs text-slate-700 mt-1">Selected: {formData[file.name].name}</p>
+                                )}
+                              </div>
+                              {formData[`${file.name}Preview`] && (
+                                <div className="relative">
+                                  <img 
+                                    src={formData[`${file.name}Preview`]} 
+                                    alt="Preview" 
+                                    className="w-24 h-32 object-cover rounded-lg border border-slate-300"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeImagePreview(file.name)}
+                                    className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>

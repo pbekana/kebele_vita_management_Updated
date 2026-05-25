@@ -137,6 +137,29 @@ const requestCertificate = async (req, res) => {
   let connection;
 
   try {
+    // ── IMAGE UPLOAD VALIDATION ──────────────────────────────────────────────
+    // Birth, Marriage, and ID certificates: image uploads allowed
+    // Death certificates: NO image uploads allowed (per requirements)
+    
+    if (certificate_type === 'death' && (deceasedPhotoPath || applicantPhotoPath)) {
+      return res.status(400).json({
+        error: 'Image uploads are not permitted for death certificates. Please remove any uploaded photos and resubmit.',
+      });
+    }
+
+    // Validate image uploads only for allowed certificate types
+    const allowedImageTypes = ['birth', 'marriage', 'residency-id', 'residency'];
+    const imageUploads = { childPhotoPath, husbandPhotoPath, wifePhotoPath, applicantPhotoPath };
+    
+    if (!allowedImageTypes.includes(certificate_type)) {
+      for (const [field, path] of Object.entries(imageUploads)) {
+        if (path) {
+          return res.status(400).json({
+            error: `Image uploads are not supported for ${certificate_type} certificates.`,
+          });
+        }
+      }
+    }
     connection = await pool.getConnection();
 
     await connection.beginTransaction();
@@ -432,6 +455,7 @@ const downloadCertificate = async (req, res) => {
     }
 
     const cert = rows[0];
+    cert.fullAddress = [cert.address, cert.house_number].filter(Boolean).join(', ') || cert.address || null;
 
     // Block PDF generation for non-approved certificates
     if (cert.status !== 'approved' && cert.status !== 'issued') {
@@ -443,28 +467,43 @@ const downloadCertificate = async (req, res) => {
     // ── TYPE-SPECIFIC DATA ENRICHMENT ────────────────────────────────────
 
     // BIRTH: Get actual child data from children table
-    if (cert.certificate_type === 'birth' && cert.child_name) {
-      // Try to find child by name matching the certificate
-      const childNameParts = cert.child_name.trim().split(/\s+/);
-      const childFirst = childNameParts[0] || '';
-      const [childRows] = await pool.query(
-        `SELECT firstname, lastname, gender, birth_date, birthplace
-         FROM children
-         WHERE (father_id = ? OR mother_id = ?)
-         AND firstname LIKE ?
-         LIMIT 1`,
-        [cert.resident_id, cert.resident_id, `${childFirst}%`]
-      );
-      if (childRows.length > 0) {
-        const child = childRows[0];
-        cert.child_full_name = `${child.firstname} ${child.lastname}`;
-        cert.child_birth_date = child.birth_date;
-        cert.child_birthplace = child.birthplace;
-        cert.child_gender = child.gender;
-      } else {
-        cert.child_full_name = cert.child_name;
+    if (cert.certificate_type === 'birth') {
+      // Initialize child fields to ensure they exist
+      if (!cert.child_full_name) {
+        cert.child_full_name = cert.child_name || null;
       }
-      // For birth cert, father/mother name comes from the resident
+      if (!cert.child_birth_date) {
+        cert.child_birth_date = null;
+      }
+      if (!cert.child_birthplace) {
+        cert.child_birthplace = null;
+      }
+      if (!cert.child_gender) {
+        cert.child_gender = null;
+      }
+
+      // Try to enrich with actual child data if child_name is provided
+      if (cert.child_name) {
+        const childNameParts = cert.child_name.trim().split(/\s+/);
+        const childFirst = childNameParts[0] || '';
+        const [childRows] = await pool.query(
+          `SELECT firstname, lastname, gender, birth_date, birthplace, father_id, mother_id
+           FROM children
+           WHERE (father_id = ? OR mother_id = ?)
+             AND firstname LIKE ?
+           LIMIT 1`,
+          [cert.resident_id, cert.resident_id, `${childFirst}%`]
+        );
+        if (childRows.length > 0) {
+          const child = childRows[0];
+          cert.child_full_name = `${child.firstname} ${child.lastname}`;
+          cert.child_birth_date = child.birth_date;
+          cert.child_birthplace = child.birthplace;
+          cert.child_gender = child.gender;
+        }
+      }
+      
+      // Ensure parent names are populated from resident profile if missing
       if (cert.gender === 'male') {
         cert.father_name = cert.father_name || `${cert.resident_firstname} ${cert.resident_lastname}`;
       } else {
@@ -474,6 +513,16 @@ const downloadCertificate = async (req, res) => {
 
     // MARRIAGE: Enrich with marriage_relationships and spouse data
     if (cert.certificate_type === 'marriage') {
+      // Initialize marriage fields
+      if (!cert.husband_name) cert.husband_name = null;
+      if (!cert.wife_name) cert.wife_name = null;
+      if (!cert.husband_birth_date) cert.husband_birth_date = null;
+      if (!cert.husband_birth_place) cert.husband_birth_place = null;
+      if (!cert.wife_birth_date) cert.wife_birth_date = null;
+      if (!cert.wife_birth_place) cert.wife_birth_place = null;
+      if (!cert.marriage_date) cert.marriage_date = null;
+      if (!cert.marriage_place) cert.marriage_place = null;
+
       const residentFullName = `${cert.resident_firstname} ${cert.resident_lastname}`.trim();
 
       // Check marriage_relationships table for enriched data
@@ -539,18 +588,28 @@ const downloadCertificate = async (req, res) => {
     }
 
     // DEATH: Enrich with deceased person data
-    if (cert.certificate_type === 'death' && cert.deceased_resident_id) {
-      const [deceasedRows] = await pool.query(
-        `SELECT firstname, lastname, gender, birth_date FROM residents WHERE id = ? LIMIT 1`,
-        [cert.deceased_resident_id]
-      );
-      if (deceasedRows.length > 0) {
-        const dec = deceasedRows[0];
-        cert.deceased_full_name = `${dec.firstname} ${dec.lastname}`;
-        cert.deceased_gender    = dec.gender;
-        cert.deceased_birth_date = dec.birth_date;
-        // For death cert the "child_name" field stores the deceased name in the legacy flow
-        cert.child_name = cert.child_name || cert.deceased_full_name;
+    if (cert.certificate_type === 'death') {
+      // Initialize death fields
+      if (!cert.deceased_full_name) cert.deceased_full_name = null;
+      if (!cert.deceased_birth_date) cert.deceased_birth_date = null;
+      if (!cert.death_date) cert.death_date = null;
+      if (!cert.death_place) cert.death_place = null;
+      if (!cert.cause_of_death) cert.cause_of_death = null;
+
+      if (cert.deceased_resident_id) {
+        const [deceasedRows] = await pool.query(
+          `SELECT firstname, lastname, gender, birth_date FROM residents WHERE id = ? LIMIT 1`,
+          [cert.deceased_resident_id]
+        );
+        if (deceasedRows.length > 0) {
+          const dec = deceasedRows[0];
+          cert.deceased_full_name = `${dec.firstname} ${dec.lastname}`.trim();
+          cert.deceased_gender    = dec.gender;
+          cert.deceased_birth_date = dec.birth_date;
+          cert.child_name = cert.child_name || cert.deceased_full_name;
+        }
+      } else if (cert.child_name) {
+        cert.deceased_full_name = cert.child_name;
       }
     }
 
@@ -565,9 +624,35 @@ const downloadCertificate = async (req, res) => {
         [cert.spouse_id]
       );
       if (spouseRows.length > 0) {
-        cert.spouse_name = `${spouseRows[0].firstname} ${spouseRows[0].lastname}`;
+        cert.spouse_name = `${spouseRows[0].firstname} ${spouseRows[0].lastname}`.trim();
       }
     }
+
+    // Ensure all common fields are populated for any certificate type
+    if (!cert.fullAddress) {
+      cert.fullAddress = [cert.address, cert.house_number].filter(Boolean).join(', ') || cert.address || null;
+    }
+
+    // ── DEBUG LOGGING ────────────────────────────────────────────────────────
+    logger.info(`[PDF] Certificate ID: ${certificateId}, Type: ${cert.certificate_type}`);
+    logger.info(`[PDF] Resident: ${cert.resident_firstname} ${cert.resident_lastname}`);
+    logger.info(`[PDF] Phone: ${cert.phone_number}, Occupation: ${cert.occupation}`);
+    
+    if (cert.certificate_type === 'birth') {
+      logger.info(`[PDF BIRTH] Child: ${cert.child_full_name}, DOB: ${cert.child_birth_date}, Birthplace: ${cert.child_birthplace}`);
+      logger.info(`[PDF BIRTH] Father: ${cert.father_name}, Mother: ${cert.mother_name}`);
+    } else if (cert.certificate_type === 'marriage') {
+      logger.info(`[PDF MARRIAGE] Husband: ${cert.husband_name} (${cert.husband_birth_date}), Wife: ${cert.wife_name} (${cert.wife_birth_date})`);
+      logger.info(`[PDF MARRIAGE] Date: ${cert.marriage_date}, Place: ${cert.marriage_place}`);
+    } else if (cert.certificate_type === 'death') {
+      logger.info(`[PDF DEATH] Deceased: ${cert.deceased_full_name}, DOD: ${cert.death_date}, Cause: ${cert.cause_of_death}`);
+    } else if (cert.certificate_type === 'residency-id' || cert.certificate_type === 'residency') {
+      logger.info(`[PDF RESIDENCY] Gender: ${cert.gender}, DOB: ${cert.birth_date}, Birthplace: ${cert.birthplace}`);
+      logger.info(`[PDF RESIDENCY] Father: ${cert.father_name}, Mother: ${cert.mother_name}, Spouse: ${cert.spouse_name}`);
+      logger.info(`[PDF RESIDENCY] Address: ${cert.fullAddress}`);
+    }
+
+    logger.info(`[PDF] Calling generateCertificate with certificate object containing ${Object.keys(cert).length} fields`);
 
     // Always generate a fresh standards-compliant PDF from the template.
     res.setHeader('Content-Type', 'application/pdf');
