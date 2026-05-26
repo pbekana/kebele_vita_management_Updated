@@ -176,6 +176,10 @@ const requestCertificate = async (req, res) => {
       });
     }
 
+    let final_death_date = death_date || null;
+    let final_cause_of_death = cause_of_death || null;
+    let final_death_place = death_place || null;
+
     if (certificate_type === 'birth') {
       const [matchingChildren] = await connection.query(
         `SELECT id FROM children WHERE lastname = ? LIMIT 1`,
@@ -237,15 +241,24 @@ const requestCertificate = async (req, res) => {
       }
 
       const [familyCheck] = await connection.query(
-        `SELECT 1 FROM family_relationships
-         WHERE (resident_id = ? AND related_resident_id = ?)
-            OR (resident_id = ? AND related_resident_id = ?)
-         LIMIT 1`,
+        `SELECT 1
+         FROM (
+           SELECT 1 FROM family_relationships
+           WHERE (resident_id = ? AND related_resident_id = ?)
+              OR (resident_id = ? AND related_resident_id = ?)
+           UNION
+           SELECT 1 FROM marriage_relationships
+           WHERE (husband_id = ? AND wife_id = ?)
+              OR (husband_id = ? AND wife_id = ?)
+           UNION
+           SELECT 1 FROM residents
+           WHERE (id = ? AND spouse_id = ?)
+              OR (id = ? AND spouse_id = ?)
+         ) AS matches LIMIT 1`,
         [
-          resident.id,
-          resolvedDeceasedResidentId,
-          resolvedDeceasedResidentId,
-          resident.id,
+          resident.id, resolvedDeceasedResidentId, resolvedDeceasedResidentId, resident.id,
+          resident.id, resolvedDeceasedResidentId, resolvedDeceasedResidentId, resident.id,
+          resident.id, resolvedDeceasedResidentId, resolvedDeceasedResidentId, resident.id
         ]
       );
 
@@ -254,6 +267,21 @@ const requestCertificate = async (req, res) => {
         return res.status(403).json({
           error: 'A death certificate can only be requested by a valid family member of the deceased.',
         });
+      }
+
+      const [deathReports] = await connection.query(
+        `SELECT date_of_death, cause_of_death, place_of_death 
+         FROM death_reports 
+         WHERE deceased_person_id = ? 
+         ORDER BY created_at DESC LIMIT 1`,
+        [resolvedDeceasedResidentId]
+      );
+
+      if (deathReports.length > 0) {
+        const report = deathReports[0];
+        final_death_date = final_death_date || report.date_of_death;
+        final_cause_of_death = final_cause_of_death || report.cause_of_death;
+        final_death_place = final_death_place || report.place_of_death;
       }
     }
 
@@ -317,9 +345,9 @@ const requestCertificate = async (req, res) => {
           birth_date || null,
           resolvedDeceasedResidentId,
           deceasedPhotoPath,
-          death_date || null,
-          cause_of_death || null,
-          death_place || null,
+          final_death_date,
+          final_cause_of_death,
+          final_death_place,
           final_husband_name,
           husbandPhotoPath,
           wife_name || null,
@@ -608,6 +636,19 @@ const downloadCertificate = async (req, res) => {
           cert.deceased_gender    = dec.gender;
           cert.deceased_birth_date = dec.birth_date;
           cert.child_name = cert.child_name || cert.deceased_full_name;
+        }
+
+        if (!cert.death_date || !cert.death_place || !cert.cause_of_death) {
+           const [deathReports] = await pool.query(
+             `SELECT date_of_death, cause_of_death, place_of_death FROM death_reports WHERE deceased_person_id = ? ORDER BY created_at DESC LIMIT 1`,
+             [cert.deceased_resident_id]
+           );
+           if (deathReports.length > 0) {
+             const report = deathReports[0];
+             cert.death_date = cert.death_date || report.date_of_death;
+             cert.cause_of_death = cert.cause_of_death || report.cause_of_death;
+             cert.death_place = cert.death_place || report.place_of_death;
+           }
         }
       } else if (cert.child_name) {
         cert.deceased_full_name = cert.child_name;
@@ -1064,11 +1105,25 @@ const createDeathReport = async (req, res) => {
 
     // Verify family relationship exists
     const [familyCheck] = await pool.query(
-      `SELECT 1 FROM family_relationships
-       WHERE (resident_id = ? AND related_resident_id = ?)
-          OR (resident_id = ? AND related_resident_id = ?)
-       LIMIT 1`,
-      [reporterId, deceased_person_id, deceased_person_id, reporterId]
+      `SELECT 1
+       FROM (
+         SELECT 1 FROM family_relationships
+         WHERE (resident_id = ? AND related_resident_id = ?)
+            OR (resident_id = ? AND related_resident_id = ?)
+         UNION
+         SELECT 1 FROM marriage_relationships
+         WHERE (husband_id = ? AND wife_id = ?)
+            OR (husband_id = ? AND wife_id = ?)
+         UNION
+         SELECT 1 FROM residents
+         WHERE (id = ? AND spouse_id = ?)
+            OR (id = ? AND spouse_id = ?)
+       ) AS matches LIMIT 1`,
+      [
+        reporterId, deceased_person_id, deceased_person_id, reporterId,
+        reporterId, deceased_person_id, deceased_person_id, reporterId,
+        reporterId, deceased_person_id, deceased_person_id, reporterId
+      ]
     );
 
     if (familyCheck.length === 0) {
@@ -1077,24 +1132,28 @@ const createDeathReport = async (req, res) => {
       });
     }
 
-    // If an evidence document was uploaded, cross-check deceased name
-    // (Evidence is not required — skip check if no file provided)
     if (evidenceDocPath) {
-      // Attempt basic name match: log a warning if evidence filename contains a different name
-      // Full OCR-based checking would require an external service — here we do DB-level confirmation
       const deceasedFullName = `${deceased.firstname} ${deceased.lastname}`.toLowerCase();
-      const evidenceFilename  = (req.file?.originalname || '').toLowerCase();
-
-      // If filename contains any name fragment, verify it matches
-      const filenameWords = evidenceFilename.replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 2);
-      const nameMatchFailed = filenameWords.length > 0 && !filenameWords.some(w =>
-        deceasedFullName.includes(w)
-      );
-
-      if (nameMatchFailed) {
-        logger.warn(
-          `Death report evidence filename '${req.file?.originalname}' may not match deceased '${deceased.firstname} ${deceased.lastname}' — accepted anyway (manual review required)`
-        );
+      
+      try {
+        if (req.file && req.file.mimetype === 'application/pdf') {
+          const fs = require('fs');
+          const pdfParse = require('pdf-parse');
+          const dataBuffer = fs.readFileSync(req.file.path);
+          const data = await pdfParse(dataBuffer);
+          const pdfText = data.text.toLowerCase();
+          
+          const firstnameFound = pdfText.includes(deceased.firstname.toLowerCase());
+          const lastnameFound = pdfText.includes(deceased.lastname.toLowerCase());
+          
+          if (!firstnameFound || !lastnameFound) {
+            logger.warn(
+              `Uploaded document text may not match the deceased person (${deceased.firstname} ${deceased.lastname}) — accepted anyway for manual review.`
+            );
+          }
+        }
+      } catch (pdfErr) {
+        logger.warn(`Failed to parse PDF for name matching: ${pdfErr.message}`);
       }
 
       logger.info(

@@ -312,8 +312,9 @@ const ApplyCertificate = () => {
       payload.append('certificate_type', type);
 
       // Pre-fill backend verified entity IDs if applicable
-      if (type === 'death' && selectedDeceasedId) {
-        const report = backendData.deathReports.find(d => d.id === selectedDeceasedId);
+      if (type === 'death') {
+        const actualDeceasedId = selectedDeceasedId || (backendData.deathReports && backendData.deathReports[0]?.id);
+        const report = backendData.deathReports?.find(d => d.id === actualDeceasedId);
         if (report) payload.append('deceased_resident_id', report.deceased_person_id);
       }
 
@@ -577,46 +578,48 @@ const ApplyCertificate = () => {
                       </p>
                     </div>
 
-                    <div className="rounded-3xl border border-slate-200 p-5">
-                      <h2 className="text-lg font-semibold mb-4">Certificate Photos</h2>
-                      <div className="space-y-6">
-                        {previewData.uploadFields.map((file) => (
-                          <div key={file.name} className="space-y-3">
-                            <label className="block text-sm font-medium">{file.label}</label>
-                            <div className="flex gap-4">
-                              <div className="flex-1">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={handleFileChange(file.name)}
-                                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-900 hover:file:bg-blue-200"
-                                />
-                                <p className="text-xs text-slate-500 mt-1">{file.description}{file.required ? ' Required.' : ' Optional.'}</p>
-                                {formData[file.name] && (
-                                  <p className="text-xs text-slate-700 mt-1">Selected: {formData[file.name].name}</p>
+                    {previewData.uploadFields.length > 0 && (
+                      <div className="rounded-3xl border border-slate-200 p-5">
+                        <h2 className="text-lg font-semibold mb-4">Certificate Photos</h2>
+                        <div className="space-y-6">
+                          {previewData.uploadFields.map((file) => (
+                            <div key={file.name} className="space-y-3">
+                              <label className="block text-sm font-medium">{file.label}</label>
+                              <div className="flex gap-4">
+                                <div className="flex-1">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleFileChange(file.name)}
+                                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-900 hover:file:bg-blue-200"
+                                  />
+                                  <p className="text-xs text-slate-500 mt-1">{file.description}{file.required ? ' Required.' : ' Optional.'}</p>
+                                  {formData[file.name] && (
+                                    <p className="text-xs text-slate-700 mt-1">Selected: {formData[file.name].name}</p>
+                                  )}
+                                </div>
+                                {formData[`${file.name}Preview`] && (
+                                  <div className="relative">
+                                    <img 
+                                      src={formData[`${file.name}Preview`]} 
+                                      alt="Preview" 
+                                      className="w-24 h-32 object-cover rounded-lg border border-slate-300"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeImagePreview(file.name)}
+                                      className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 )}
                               </div>
-                              {formData[`${file.name}Preview`] && (
-                                <div className="relative">
-                                  <img 
-                                    src={formData[`${file.name}Preview`]} 
-                                    alt="Preview" 
-                                    className="w-24 h-32 object-cover rounded-lg border border-slate-300"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => removeImagePreview(file.name)}
-                                    className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              )}
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
@@ -650,35 +653,37 @@ const ApplyCertificate = () => {
                   <p className="text-sm text-slate-700">Review the preview above and confirm that all data is correct. The system will submit the certificate request using your profile data and any additional details you provided.</p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-3">Upload Supporting Documents</label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-blue-400">
-                    <input type="file" multiple accept="image/*,.pdf" onChange={addDocumentFiles} className="hidden" id="docs" />
-                    <label htmlFor="docs" className="cursor-pointer block">
-                      <Upload className="mx-auto w-12 h-12 text-gray-400 mb-3" />
-                      <p className="font-medium">Click to upload supporting documents</p>
-                    </label>
-                  </div>
-
-                  {formData.documents.length > 0 && (
-                    <div className="mt-4 space-y-3">
-                      {formData.documents.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between bg-gray-50 p-4 rounded-2xl border">
-                          <div className="flex items-center gap-3">
-                            <div>📄</div>
-                            <div>
-                              <p className="font-medium text-sm">{file.name}</p>
-                              <p className="text-xs text-gray-500">{file.size}</p>
-                            </div>
-                          </div>
-                          <button type="button" onClick={() => removeFile(index)} className="text-red-500 hover:text-red-700">
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      ))}
+                {type !== 'death' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-3">Upload Supporting Documents</label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-blue-400">
+                      <input type="file" multiple accept="image/*,.pdf" onChange={addDocumentFiles} className="hidden" id="docs" />
+                      <label htmlFor="docs" className="cursor-pointer block">
+                        <Upload className="mx-auto w-12 h-12 text-gray-400 mb-3" />
+                        <p className="font-medium">Click to upload supporting documents</p>
+                      </label>
                     </div>
-                  )}
-                </div>
+
+                    {formData.documents.length > 0 && (
+                      <div className="mt-4 space-y-3">
+                        {formData.documents.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between bg-gray-50 p-4 rounded-2xl border">
+                            <div className="flex items-center gap-3">
+                              <div>📄</div>
+                              <div>
+                                <p className="font-medium text-sm">{file.name}</p>
+                                <p className="text-xs text-gray-500">{file.size}</p>
+                              </div>
+                            </div>
+                            <button type="button" onClick={() => removeFile(index)} className="text-red-500 hover:text-red-700">
+                              <X className="w-5 h-5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-semibold text-lg transition">
                   {loading ? 'Submitting...' : 'Confirm and Apply'}

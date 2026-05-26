@@ -382,7 +382,6 @@ function renderDeath(doc, data, startY) {
     ['Date of Death / የሞት ቀን',        fmtDate(data.deathDate)],
     ['Place of Death / የሞት ቦታ',       s(data.deathPlace)],
     ['Cause of Death / የሞት ምክንያት',   s(data.causeOfDeath)],
-    ['Manner of Death / ሁኔታ',         s(data.mannerOfDeath)],
     ['Registration Date / ምዝገባ',      fmtDate(data.registrationDate)],
   ];
   deceasedRows.forEach(([label, value]) => {

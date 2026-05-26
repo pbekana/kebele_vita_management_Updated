@@ -405,3 +405,50 @@
 [2026-05-25T23:53:12.710Z] [ERROR] Unhandled: Only image uploads are allowed for photo fields
 [2026-05-25T23:54:46.231Z] [ERROR] Unhandled: Only image uploads are allowed for photo fields
 [2026-05-25T23:55:51.785Z] [INFO] Death report 2 created by resident 7
+[2026-05-26T00:30:53.302Z] [INFO] Server running on port 5000
+[2026-05-26T00:35:16.044Z] [ERROR] Unhandled: Only image uploads are allowed for photo fields
+[2026-05-26T00:36:08.831Z] [INFO] Server running on port 5000
+[2026-05-26T00:37:03.326Z] [INFO] Death report 3 created by resident 7
+[2026-05-26T00:37:25.580Z] [INFO] Certificate request 24 created by resident 7
+[2026-05-26T00:38:56.297Z] [INFO] Admin 1 assigned task 18
+[2026-05-26T00:39:10.533Z] [INFO] Admin 1 assigned certificate 24 to staff 4
+[2026-05-26T00:39:49.732Z] [INFO] Staff 4 prepared certificate 24 for admin approval
+[2026-05-26T00:40:17.557Z] [INFO] [PDF] Certificate ID: 23, Type: residency-id
+[2026-05-26T00:40:17.558Z] [INFO] [PDF] Resident: Gemechu Daba
+[2026-05-26T00:40:17.558Z] [INFO] [PDF] Phone: 0911223344, Occupation: Farmer
+[2026-05-26T00:40:17.559Z] [INFO] [PDF RESIDENCY] Gender: undefined, DOB: null, Birthplace: undefined
+[2026-05-26T00:40:17.559Z] [INFO] [PDF RESIDENCY] Father: null, Mother: null, Spouse: Tigist Alemu
+[2026-05-26T00:40:17.559Z] [INFO] [PDF RESIDENCY] Address: Kebele 02, Jimma, H-101
+[2026-05-26T00:40:17.560Z] [INFO] [PDF] Calling generateCertificate with certificate object containing 67 fields
+[2026-05-26T00:40:39.873Z] [INFO] Admin 1 approved certificate 24
+[2026-05-26T00:41:00.217Z] [INFO] [PDF] Certificate ID: 24, Type: death
+[2026-05-26T00:41:00.218Z] [INFO] [PDF] Resident: Gemechu Daba
+[2026-05-26T00:41:00.218Z] [INFO] [PDF] Phone: 0911223344, Occupation: Farmer
+[2026-05-26T00:41:00.218Z] [INFO] [PDF DEATH] Deceased: Chaltu Roba, DOD: null, Cause: null
+[2026-05-26T00:41:00.218Z] [INFO] [PDF] Calling generateCertificate with certificate object containing 70 fields
+[2026-05-26T00:49:24.718Z] [INFO] Server running on port 5000
+[2026-05-26T00:50:40.301Z] [INFO] Death report 4 created by resident 7
+[2026-05-26T00:50:59.873Z] [INFO] Certificate request 25 created by resident 7
+[2026-05-26T00:51:43.081Z] [INFO] Admin 1 assigned certificate 25 to staff 4
+[2026-05-26T00:52:33.969Z] [INFO] Staff 4 prepared certificate 25 for admin approval
+[2026-05-26T00:53:00.003Z] [INFO] Admin 1 approved certificate 25
+[2026-05-26T00:53:19.233Z] [INFO] [PDF] Certificate ID: 25, Type: death
+[2026-05-26T00:53:19.234Z] [INFO] [PDF] Resident: Gemechu Daba
+[2026-05-26T00:53:19.234Z] [INFO] [PDF] Phone: 0911223344, Occupation: Farmer
+[2026-05-26T00:53:19.235Z] [INFO] [PDF DEATH] Deceased: Chaltu Roba, DOD: Tue May 26 2026 00:00:00 GMT+0300 (East Africa Time), Cause: Sickness
+[2026-05-26T00:53:19.235Z] [INFO] [PDF] Calling generateCertificate with certificate object containing 70 fields
+[2026-05-26T01:05:58.115Z] [INFO] Server running on port 5000
+[2026-05-26T01:06:50.091Z] [INFO] Death report 5 created by resident 7
+[2026-05-26T01:09:11.846Z] [INFO] Server running on port 5000
+[2026-05-26T01:10:10.375Z] [INFO] Death report 6 created by resident 7
+[2026-05-26T01:11:56.425Z] [INFO] Server running on port 5000
+[2026-05-26T01:13:20.622Z] [INFO] Death report 7 created by resident 7
+[2026-05-26T01:13:36.896Z] [INFO] Certificate request 26 created by resident 7
+[2026-05-26T01:13:59.000Z] [INFO] Admin 1 assigned certificate 26 to staff 4
+[2026-05-26T01:14:38.501Z] [INFO] Staff 4 prepared certificate 26 for admin approval
+[2026-05-26T01:14:57.543Z] [INFO] Admin 1 approved certificate 26
+[2026-05-26T01:15:33.498Z] [INFO] [PDF] Certificate ID: 26, Type: death
+[2026-05-26T01:15:33.498Z] [INFO] [PDF] Resident: Gemechu Daba
+[2026-05-26T01:15:33.499Z] [INFO] [PDF] Phone: 0911223344, Occupation: Farmer
+[2026-05-26T01:15:33.499Z] [INFO] [PDF DEATH] Deceased: Chaltu Roba, DOD: Tue May 26 2026 00:00:00 GMT+0300 (East Africa Time), Cause: fhfhj
+[2026-05-26T01:15:33.500Z] [INFO] [PDF] Calling generateCertificate with certificate object containing 70 fields

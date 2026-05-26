@@ -1323,7 +1323,7 @@ const ResidentDashboard = () => {
     { label: 'Residency ID', icon: '🪪', path: 'residency-id' },
   ];
 
-  const { notifyError, notifyWarning } = useNotification();
+  const { notifyError, notifyWarning, notifySuccess } = useNotification();
 
   const downloadCertificate = async (cert) => {
     if (cert.status !== 'approved' && cert.status !== 'issued') {
