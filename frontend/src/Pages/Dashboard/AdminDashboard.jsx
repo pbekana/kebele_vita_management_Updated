@@ -23,6 +23,7 @@ const AdminDashboard = () => {
   const [newTask, setNewTask] = useState({
     title: '', description: '', task_type: 'id_card', assigned_to: '', resident_id: '', due_date: ''
   });
+  const [editingTask, setEditingTask] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const [approvalCerts, setApprovalCerts] = useState([]);
@@ -355,7 +356,26 @@ const AdminDashboard = () => {
       setTasks(tasksRes.data.tasks || []);
       notifySuccess('Task reassigned successfully!');
     } catch (err) {
-      notifyError('Failed to reassign task');
+      notifyError(err.response?.data?.error || 'Failed to reassign task');
+    }
+  };
+
+  const handleUpdateTask = async (e) => {
+    e.preventDefault();
+    if (!editingTask) return;
+    
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      await axios.put(`http://localhost:5000/api/admin/tasks/${editingTask.id}`, editingTask, config);
+      
+      const tasksRes = await axios.get('http://localhost:5000/api/admin/tasks', config);
+      setTasks(tasksRes.data.tasks || []);
+      setEditingTask(null);
+      notifySuccess('Task updated successfully!');
+    } catch (err) {
+      notifyError(err.response?.data?.error || 'Failed to update task');
     }
   };
 
@@ -876,7 +896,7 @@ const AdminDashboard = () => {
                       <th className="px-6 py-4 text-left font-semibold">Assigned To</th>
                       <th className="px-6 py-4 text-left font-semibold">Status</th>
                       <th className="px-6 py-4 text-left font-semibold">Due Date</th>
-                      <th className="px-6 py-4 text-left font-semibold">Reassign</th>
+                      <th className="px-6 py-4 text-left font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -894,16 +914,26 @@ const AdminDashboard = () => {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">{task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}</td>
                         <td className="px-6 py-4">
-                          <select 
-                            onChange={(e) => handleReassignTask(task.id, e.target.value)}
-                            className="text-sm border rounded px-2 py-1 focus:ring-2 focus:ring-indigo-500"
-                            value={task.assigned_to}
-                          >
-                            <option value="">Reassign...</option>
-                            {staffList.filter(s => s.is_active).map(staff => (
-                              <option key={staff.user_id} value={staff.user_id}>{staff.email} ({staff.position || 'Staff'})</option>
-                            ))}
-                          </select>
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => setEditingTask({...task})}
+                              className="text-indigo-600 hover:text-indigo-800 font-semibold text-sm"
+                            >
+                              Edit
+                            </button>
+                            <select 
+                              onChange={(e) => {
+                                if (e.target.value) handleReassignTask(task.id, e.target.value);
+                                e.target.value = '';
+                              }}
+                              className="text-sm border rounded px-2 py-1 focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="">Reassign...</option>
+                              {staffList.filter(s => s.is_active && s.user_id !== task.assigned_to).map(staff => (
+                                <option key={staff.user_id} value={staff.user_id}>{staff.email}</option>
+                              ))}
+                            </select>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1081,6 +1111,90 @@ const AdminDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Task Edit Modal */}
+      {editingTask && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b">
+              <h3 className="text-2xl font-bold">Edit Task</h3>
+            </div>
+            <form onSubmit={handleUpdateTask} className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={editingTask.title} 
+                    onChange={e => setEditingTask({...editingTask, title: e.target.value})} 
+                    className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Task Type *</label>
+                  <select 
+                    value={editingTask.task_type} 
+                    onChange={e => setEditingTask({...editingTask, task_type: e.target.value})} 
+                    className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="id_card">ID Card</option>
+                    <option value="birth_certificate">Birth Certificate</option>
+                    <option value="death_certificate">Death Certificate</option>
+                    <option value="marriage_certificate">Marriage Certificate</option>
+                    <option value="issue_report">Issue Report</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <textarea 
+                    value={editingTask.description || ''} 
+                    onChange={e => setEditingTask({...editingTask, description: e.target.value})} 
+                    className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500" 
+                    rows="3"
+                  ></textarea>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Assign To (Staff) *</label>
+                  <select 
+                    required 
+                    value={editingTask.assigned_to} 
+                    onChange={e => setEditingTask({...editingTask, assigned_to: e.target.value})} 
+                    className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">Select Staff...</option>
+                    {staffList.filter(s => s.is_active).map(staff => (
+                      <option key={staff.user_id} value={staff.user_id}>{staff.email} ({staff.position || 'Staff'})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+                  <input 
+                    type="date" 
+                    value={editingTask.due_date ? editingTask.due_date.split('T')[0] : ''} 
+                    onChange={e => setEditingTask({...editingTask, due_date: e.target.value})} 
+                    className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button type="submit" className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold transition">
+                  Update Task
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setEditingTask(null)} 
+                  className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 font-semibold transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

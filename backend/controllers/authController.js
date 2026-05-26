@@ -326,21 +326,21 @@ const verifyOTP = async (req, res) => {
     );
 
     if (users.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'User not found. Please check your email address.' });
     }
 
     const user = users[0];
 
     if (user.is_active) {
-      return res.status(400).json({ error: 'User is already verified and active' });
+      return res.status(400).json({ error: 'User is already verified and active. Please login.' });
     }
 
     if (!user.otp_code || user.otp_code !== otp) {
-      return res.status(400).json({ error: 'Invalid OTP' });
+      return res.status(400).json({ error: 'Verification code is invalid. Please check and try again.' });
     }
 
     if (new Date() > new Date(user.otp_expires_at)) {
-      return res.status(400).json({ error: 'OTP has expired' });
+      return res.status(400).json({ error: 'Verification code has expired. Please request a new code.' });
     }
 
     await pool.query(

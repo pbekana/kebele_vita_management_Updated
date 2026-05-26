@@ -2,10 +2,21 @@ const express = require("express");
 const router = express.Router();
 const { protect } = require("../middleware/authMiddleware");
 const { pool } = require("../config/connectDB");
+const { validationResult } = require('express-validator');
+const { createDeathCertificateValidator } = require("../validators/deathValidators");
 
 
 // CREATE DEATH CERTIFICATE REQUEST (WITH FAMILY VALIDATION)
-router.post("/", protect, async (req, res) => {
+router.post("/", protect, createDeathCertificateValidator, async (req, res) => {
+  // Check validation errors
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      error: errors.array()[0].msg,
+      errors: errors.array()
+    });
+  }
+
   try {
     const {
       deceased_resident_id,

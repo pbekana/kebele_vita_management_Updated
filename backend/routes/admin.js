@@ -8,7 +8,7 @@ const {
   getCertificates, rejectCertificate, getReports, updateReportStatus
 } = require('../controllers/adminController');
 const {
-  createTask, getAllTasks, reassignTask
+  createTask, getAllTasks, reassignTask, updateTask
 } = require('../controllers/taskController');
 const { createTaskValidator } = require('../validators/taskValidators');
 
@@ -38,6 +38,8 @@ router.get('/staff', getStaffList);
 
 router.get('/tasks', getAllTasks);
 router.post('/tasks/create', createTaskValidator, createTask);
+router.put('/tasks/:id', updateTask);
+router.put('/tasks/:id/reassign', reassignTask);
 router.get('/reports', getReports);
 router.put('/reports/:id/status', updateReportStatus);
 

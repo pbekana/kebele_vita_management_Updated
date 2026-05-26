@@ -40,8 +40,21 @@ export default function RegisterForm() {
 
   const validateStep1 = () => {
     const newErrors = {};
-    if (!form.firstname.trim()) newErrors.firstname = "First name is required";
-    if (!form.lastname.trim()) newErrors.lastname = "Last name is required";
+    
+    // First name validation
+    if (!form.firstname.trim()) {
+      newErrors.firstname = "First name is required";
+    } else if (/\d/.test(form.firstname)) {
+      newErrors.firstname = "First name cannot contain numbers";
+    }
+    
+    // Last name validation
+    if (!form.lastname.trim()) {
+      newErrors.lastname = "Last name is required";
+    } else if (/\d/.test(form.lastname)) {
+      newErrors.lastname = "Last name cannot contain numbers";
+    }
+    
     if (!form.email.trim()) newErrors.email = "Email is required";
     if (!form.phone_number.trim()) newErrors.phone = "Phone number is required";
     if (!form.password) newErrors.password = "Password is required";

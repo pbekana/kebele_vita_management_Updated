@@ -33,7 +33,20 @@ const createTaskValidator = [
   body('due_date')
     .optional()
     .isDate()
-    .withMessage('Invalid due date'),
+    .withMessage('Invalid due date')
+    .custom((value) => {
+      if (value) {
+        const selectedDate = new Date(value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        selectedDate.setHours(0, 0, 0, 0);
+        
+        if (selectedDate < today) {
+          throw new Error('Task date cannot be earlier than today. Please select today or a future date.');
+        }
+      }
+      return true;
+    }),
 ];
 
 const updateTaskStatusValidator = [

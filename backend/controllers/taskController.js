@@ -319,10 +319,126 @@ const reassignTask = async (req, res) => {
   }
 };
 
+/**
+ * PUT /api/admin/tasks/:id
+ * Admin updates task details
+ */
+const updateTask = async (req, res) => {
+  const taskId = Number(req.params.id);
+
+  if (!Number.isInteger(taskId)) {
+    return res.status(400).json({
+      error: 'Invalid task ID',
+    });
+  }
+
+  const {
+    title,
+    description,
+    task_type,
+    assigned_to,
+    resident_id,
+    status,
+    due_date,
+  } = req.body;
+
+  try {
+    // Check if task exists
+    const [tasks] = await pool.query(
+      `SELECT * FROM tasks WHERE id = ? LIMIT 1`,
+      [taskId]
+    );
+
+    if (tasks.length === 0) {
+      return res.status(404).json({
+        error: 'Task not found',
+      });
+    }
+
+    // If assigned_to is being changed, validate the new staff member
+    if (assigned_to) {
+      const [users] = await pool.query(
+        `SELECT id, role FROM users WHERE id = ? LIMIT 1`,
+        [assigned_to]
+      );
+
+      if (users.length === 0) {
+        return res.status(404).json({
+          error: 'Assigned staff not found',
+        });
+      }
+
+      if (users[0].role !== 'kebele_staff') {
+        return res.status(400).json({
+          error: 'Task can only be assigned to kebele staff',
+        });
+      }
+    }
+
+    // Build update query dynamically based on provided fields
+    const updates = [];
+    const values = [];
+
+    if (title !== undefined) {
+      updates.push('title = ?');
+      values.push(title);
+    }
+    if (description !== undefined) {
+      updates.push('description = ?');
+      values.push(description);
+    }
+    if (task_type !== undefined) {
+      updates.push('task_type = ?');
+      values.push(task_type);
+    }
+    if (assigned_to !== undefined) {
+      updates.push('assigned_to = ?');
+      values.push(assigned_to);
+    }
+    if (resident_id !== undefined) {
+      updates.push('resident_id = ?');
+      values.push(resident_id);
+    }
+    if (status !== undefined) {
+      updates.push('status = ?');
+      values.push(status);
+    }
+    if (due_date !== undefined) {
+      updates.push('due_date = ?');
+      values.push(due_date);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({
+        error: 'No fields to update',
+      });
+    }
+
+    values.push(taskId);
+
+    await pool.query(
+      `UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`,
+      values
+    );
+
+    logger.info(
+      `Admin ${req.user.id} updated task ${taskId}`
+    );
+
+    return res.status(200).json({
+      message: 'Task updated successfully',
+    });
+
+  } catch (err) {
+    return serverError(res, err, 'Failed to update task');
+  }
+};
+
 module.exports = {
   createTask,
   getAllTasks,
   getMyTasks,
   updateTaskStatus,
   reassignTask,
+  updateTask,
 };

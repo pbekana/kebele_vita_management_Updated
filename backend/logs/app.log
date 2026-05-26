@@ -526,3 +526,17 @@
 [2026-05-26T08:05:02.488Z] [INFO] [PDF RESIDENCY] Father: null, Mother: null, Spouse: Iftu Negash
 [2026-05-26T08:05:02.489Z] [INFO] [PDF RESIDENCY] Address: Kebele 03, Jimma, H-411
 [2026-05-26T08:05:02.489Z] [INFO] [PDF] Calling generateCertificate with certificate object containing 67 fields
+[2026-05-26T11:49:05.064Z] [INFO] Server running on port 5000
+[2026-05-26T11:51:40.767Z] [INFO] Marriage relationship 11 created (pending) by resident 13
+[2026-05-26T11:53:29.638Z] [INFO] Certificate request 33 created by resident 13
+[2026-05-26T11:54:02.611Z] [INFO] Admin 1 assigned certificate 33 to staff 3
+[2026-05-26T11:54:35.761Z] [INFO] Staff 3 prepared certificate 33 for admin approval
+[2026-05-26T11:54:54.186Z] [INFO] Admin 1 approved certificate 33
+[2026-05-26T11:55:16.569Z] [INFO] [PDF] Certificate ID: 33, Type: marriage
+[2026-05-26T11:55:16.570Z] [INFO] [PDF] Resident: Darsema Chala
+[2026-05-26T11:55:16.570Z] [INFO] [PDF] Phone: 0917889900, Occupation: Student
+[2026-05-26T11:55:16.571Z] [INFO] [PDF MARRIAGE] Husband: Darsema Chala (Sun Jun 25 2000 00:00:00 GMT+0300 (East Africa Time)), Wife: Iftu Negash (Fri Sep 04 1998 00:00:00 GMT+0300 (East Africa Time))
+[2026-05-26T11:55:16.571Z] [INFO] [PDF MARRIAGE] Date: Tue May 26 2026 00:00:00 GMT+0300 (East Africa Time), Place: Jimma
+[2026-05-26T11:55:16.572Z] [INFO] [PDF] Calling generateCertificate with certificate object containing 66 fields
+[2026-05-26T12:02:54.203Z] [INFO] Admin 1 assigned task 20
+[2026-05-26T12:22:20.691Z] [INFO] Server running on port 5000

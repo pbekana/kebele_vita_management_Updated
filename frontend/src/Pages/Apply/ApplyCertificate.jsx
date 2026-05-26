@@ -732,6 +732,7 @@ const ApplyCertificate = () => {
 
   const [showChildForm, setShowChildForm] = useState(false);
   const [showMarriageForm, setShowMarriageForm] = useState(false);
+  const [childSelectionStep, setChildSelectionStep] = useState(null); // 'select' or 'register'
 
   const [loading, setLoading] = useState(false);
   const { notifySuccess, notifyError } = useNotification();
@@ -880,7 +881,32 @@ const ApplyCertificate = () => {
   const previewData = getPreviewData();
 
   const handleRegChange = (e) => {
-    setRegData({ ...regData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    // Validate birth_date for child registration
+    if (name === 'birth_date' && value) {
+      const selectedDate = new Date(value);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      selectedDate.setHours(0, 0, 0, 0);
+      
+      // Check if date is in the future
+      if (selectedDate > today) {
+        notifyError('Birth date cannot be in the future. Please select today or an earlier valid date.');
+        return;
+      }
+      
+      // Check if date is older than 3 months
+      const threeMonthsAgo = new Date(today);
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      
+      if (selectedDate < threeMonthsAgo) {
+        notifyError('Birth registration cannot continue because the birth date exceeds the maximum allowed registration period of 3 months.');
+        return;
+      }
+    }
+    
+    setRegData({ ...regData, [name]: value });
   };
 
   const handleChange = (e) => {
@@ -1088,6 +1114,7 @@ const ApplyCertificate = () => {
                       }
                       setApplicationMessage('');
                       setApplicationFor('child');
+                      setChildSelectionStep('choose'); // Show child selection options
                     }}
                     disabled={isChildApplicationDisabled}
                     className={childApplicationButtonClass}
@@ -1095,12 +1122,6 @@ const ApplyCertificate = () => {
                     <div className="text-3xl mb-3">👶</div>
                     <h3 className="font-semibold text-lg">For My Child</h3>
                     <p className="text-gray-600">New birth registration</p>
-                  </button>
-
-                  <button onClick={() => setApplicationFor('other')} className="p-6 border-2 border-gray-200 hover:border-blue-500 rounded-2xl text-left transition hover:shadow-md">
-                    <div className="text-3xl mb-3">👤</div>
-                    <h3 className="font-semibold text-lg">For Someone Else</h3>
-                    <p className="text-gray-600">Other person or guardian</p>
                   </button>
                 </>
               ) : (
@@ -1118,6 +1139,113 @@ const ApplyCertificate = () => {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Child Selection Step - Choose between existing child or register new
+  if (isBirth && applicationFor === 'child' && childSelectionStep === 'choose') {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-3xl mx-auto px-6">
+          <button 
+            onClick={() => {
+              setApplicationFor('');
+              setChildSelectionStep(null);
+            }} 
+            className="inline-flex items-center gap-2 text-blue-600 mb-8 hover:underline"
+          >
+            <ArrowLeft className="w-5 h-5" /> Back to Selection
+          </button>
+
+          <div className="bg-white rounded-3xl shadow-xl p-10">
+            <div className="text-center mb-10">
+              <div className="text-6xl mb-4">👶</div>
+              <h1 className="text-3xl font-bold">Child Birth Certificate</h1>
+              <p className="text-gray-600 mt-3">Select an existing child or register a new one</p>
+            </div>
+
+            <div className="grid gap-6">
+              {/* Option 1: Select Existing Child */}
+              {backendData?.children && backendData.children.length > 0 && (
+                <div className="border-2 border-gray-200 rounded-2xl p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="text-3xl">📋</div>
+                    <div>
+                      <h3 className="font-semibold text-lg">Select Existing Child</h3>
+                      <p className="text-sm text-gray-600">Choose from your registered children</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {backendData.children.map((child) => {
+                      const childAge = child.birth_date ? 
+                        Math.floor((new Date() - new Date(child.birth_date)) / (365.25 * 24 * 60 * 60 * 1000)) : 
+                        null;
+                      
+                      return (
+                        <button
+                          key={child.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedChildId(child.id);
+                            setChildSelectionStep(null); // Proceed to main form
+                          }}
+                          className="w-full p-4 border-2 border-gray-200 hover:border-blue-500 rounded-xl text-left transition hover:shadow-md bg-white"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold text-gray-900">
+                                {child.firstname} {child.lastname}
+                              </p>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {child.gender && <span className="capitalize">{child.gender}</span>}
+                                {child.birth_date && (
+                                  <span className="ml-2">
+                                    • Born: {new Date(child.birth_date).toLocaleDateString()}
+                                    {childAge !== null && ` (${childAge} years old)`}
+                                  </span>
+                                )}
+                              </p>
+                              {child.birthplace && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Birthplace: {child.birthplace}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-blue-600 font-semibold text-sm">Select →</div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Option 2: Register New Child */}
+              <div className="border-2 border-blue-200 rounded-2xl p-6 bg-blue-50/30">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="text-3xl">➕</div>
+                  <div>
+                    <h3 className="font-semibold text-lg">Register New Child</h3>
+                    <p className="text-sm text-gray-600">Add a new child to your records</p>
+                  </div>
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChildSelectionStep('register');
+                    setShowChildForm(true);
+                  }}
+                  className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition"
+                >
+                  Register New Child
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1175,7 +1303,20 @@ const ApplyCertificate = () => {
                               <div><label className="block text-sm font-medium mb-1">Child First Name</label><input type="text" name="firstname" value={regData.firstname} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
                               <div><label className="block text-sm font-medium mb-1">Child Last Name</label><input type="text" name="lastname" value={regData.lastname} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
                               <div><label className="block text-sm font-medium mb-1">Gender</label><select name="gender" value={regData.gender} onChange={handleRegChange} className="w-full p-3 border rounded-xl"><option value="male">Male</option><option value="female">Female</option></select></div>
-                              <div><label className="block text-sm font-medium mb-1">Date of Birth</label><input type="date" name="birth_date" value={regData.birth_date} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
+                              <div>
+                                <label className="block text-sm font-medium mb-1">Date of Birth</label>
+                                <input 
+                                  type="date" 
+                                  name="birth_date" 
+                                  value={regData.birth_date} 
+                                  onChange={handleRegChange} 
+                                  max={new Date().toISOString().split('T')[0]}
+                                  min={new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0]}
+                                  required 
+                                  className="w-full p-3 border rounded-xl" 
+                                />
+                                <p className="text-xs text-gray-500 mt-1">Valid range: Today to 3 months ago</p>
+                              </div>
                               <div><label className="block text-sm font-medium mb-1">Place of Birth</label><input type="text" name="birthplace" value={regData.birthplace} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
                             </div>
                           )}

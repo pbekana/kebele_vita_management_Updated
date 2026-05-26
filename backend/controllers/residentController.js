@@ -1298,17 +1298,71 @@ const registerChild = async (req, res) => {
       });
     }
 
+    // Validate child age - must not exceed 18 years
+    if (birth_date) {
+      const birthDate = new Date(birth_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      birthDate.setHours(0, 0, 0, 0);
+      
+      const ageInYears = (today - birthDate) / (365.25 * 24 * 60 * 60 * 1000);
+      
+      if (ageInYears > 18) {
+        return res.status(400).json({
+          error: 'Child registration cannot continue because the registered child age cannot be greater than 18 years.',
+        });
+      }
+
+      // Validate birth date is not in the future
+      if (birthDate > today) {
+        return res.status(400).json({
+          error: 'Birth date cannot be in the future. Please select today or an earlier valid date.',
+        });
+      }
+
+      // Validate birth date is not older than 3 months
+      const threeMonthsAgo = new Date(today);
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      
+      if (birthDate < threeMonthsAgo) {
+        return res.status(400).json({
+          error: 'Birth registration cannot continue because the birth date exceeds the maximum allowed registration period of 3 months.',
+        });
+      }
+    }
+
     const [result] = await pool.query(
       `INSERT INTO children (firstname, lastname, gender, birth_date, birthplace, father_id, mother_id, hospital_evidence, is_alive)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,
       [firstname, lastname, gender, birth_date, birthplace, parsedFatherId, parsedMotherId, null]
     );
 
-    logger.info(`Child ${result.insertId} registered by resident ${currentResidentId}`);
+    const childId = result.insertId;
+
+    // Store parent-child relationships in family_relationships table
+    if (parsedFatherId) {
+      await pool.query(
+        `INSERT INTO family_relationships (resident_id, family_member_id, relationship_type, created_at)
+         VALUES (?, ?, 'parent-child', NOW())
+         ON DUPLICATE KEY UPDATE relationship_type = 'parent-child'`,
+        [parsedFatherId, childId]
+      );
+    }
+
+    if (parsedMotherId) {
+      await pool.query(
+        `INSERT INTO family_relationships (resident_id, family_member_id, relationship_type, created_at)
+         VALUES (?, ?, 'parent-child', NOW())
+         ON DUPLICATE KEY UPDATE relationship_type = 'parent-child'`,
+        [parsedMotherId, childId]
+      );
+    }
+
+    logger.info(`Child ${childId} registered by resident ${currentResidentId} with family relationships`);
 
     return res.status(201).json({
       message: 'Child registered successfully',
-      child_id: result.insertId,
+      child_id: childId,
     });
 
   } catch (err) {
@@ -1530,6 +1584,22 @@ const respondToMarriageRequest = async (req, res) => {
          `UPDATE residents SET marital_status = 'married', spouse_id = ? WHERE id = ?`,
          [relationship.husband_id, relationship.wife_id]
        );
+
+       // Store spouse relationship in family_relationships table
+       await pool.query(
+         `INSERT INTO family_relationships (resident_id, family_member_id, relationship_type, created_at)
+          VALUES (?, ?, 'spouse', NOW())
+          ON DUPLICATE KEY UPDATE relationship_type = 'spouse'`,
+         [relationship.husband_id, relationship.wife_id]
+       );
+       await pool.query(
+         `INSERT INTO family_relationships (resident_id, family_member_id, relationship_type, created_at)
+          VALUES (?, ?, 'spouse', NOW())
+          ON DUPLICATE KEY UPDATE relationship_type = 'spouse'`,
+         [relationship.wife_id, relationship.husband_id]
+       );
+
+       logger.info(`Marriage relationship ${relationshipId} approved with family relationships stored`);
 
        // Notify both users of the successful approval — they must still apply for the certificate
        const [[husbandUser]] = await pool.query(`SELECT user_id FROM residents WHERE id = ? LIMIT 1`, [relationship.husband_id]);

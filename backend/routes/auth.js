@@ -24,6 +24,20 @@ const { protect } = require('../middleware/authMiddleware');
 router.post(
   '/register',
   [
+    body('firstname')
+      .trim()
+      .notEmpty()
+      .withMessage('First name is required')
+      .matches(/^[a-zA-Z\s]+$/)
+      .withMessage('First name cannot contain numbers or special characters'),
+
+    body('lastname')
+      .trim()
+      .notEmpty()
+      .withMessage('Last name is required')
+      .matches(/^[a-zA-Z\s]+$/)
+      .withMessage('Last name cannot contain numbers or special characters'),
+
     body('email')
       .isEmail()
       .withMessage('Valid email required'),
