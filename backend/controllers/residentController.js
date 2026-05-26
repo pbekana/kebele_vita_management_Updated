@@ -1032,6 +1032,18 @@ const getCertificatePreviewData = async (req, res) => {
           data.spouseData = spouse[0];
         }
       }
+
+      // Check for pending marriages
+      const [pendingMarriages] = await pool.query(
+        `SELECT * FROM marriage_relationships 
+         WHERE (husband_id = ? OR wife_id = ?) 
+         AND status = 'pending' 
+         ORDER BY created_at DESC LIMIT 1`,
+         [resident.id, resident.id]
+      );
+      if (pendingMarriages.length > 0) {
+        data.pendingMarriage = pendingMarriages[0];
+      }
     }
 
 
@@ -1091,9 +1103,8 @@ const createDeathReport = async (req, res) => {
     place_of_death,
   } = req.body;
 
-  // upload.single() stores the file in req.file (not req.files)
   // Evidence is optional — only validated if provided
-  const evidenceDocPath = normalizeUploadPath(req.file);
+  const evidenceDocPath = null; // Upload file requirement removed
 
   try {
     const [residentRows] = await pool.query(
@@ -1150,34 +1161,7 @@ const createDeathReport = async (req, res) => {
       });
     }
 
-    if (evidenceDocPath) {
-      const deceasedFullName = `${deceased.firstname} ${deceased.lastname}`.toLowerCase();
-      
-      try {
-        if (req.file && req.file.mimetype === 'application/pdf') {
-          const fs = require('fs');
-          const pdfParse = require('pdf-parse');
-          const dataBuffer = fs.readFileSync(req.file.path);
-          const data = await pdfParse(dataBuffer);
-          const pdfText = data.text.toLowerCase();
-          
-          const firstnameFound = pdfText.includes(deceased.firstname.toLowerCase());
-          const lastnameFound = pdfText.includes(deceased.lastname.toLowerCase());
-          
-          if (!firstnameFound || !lastnameFound) {
-            logger.warn(
-              `Uploaded document text may not match the deceased person (${deceased.firstname} ${deceased.lastname}) — accepted anyway for manual review.`
-            );
-          }
-        }
-      } catch (pdfErr) {
-        logger.warn(`Failed to parse PDF for name matching: ${pdfErr.message}`);
-      }
 
-      logger.info(
-        `Evidence document provided for death report: ${evidenceDocPath}. Deceased: ${deceased.firstname} ${deceased.lastname}`
-      );
-    }
 
     const [result] = await pool.query(
       `INSERT INTO death_reports
@@ -1190,7 +1174,7 @@ const createDeathReport = async (req, res) => {
         date_of_death,
         cause_of_death || null,
         place_of_death,
-        evidenceDocPath || null,
+        null,
       ]
     );
 
@@ -1199,7 +1183,6 @@ const createDeathReport = async (req, res) => {
     return res.status(201).json({
       message: 'Death report submitted successfully',
       report_id: result.insertId,
-      evidence_provided: !!evidenceDocPath,
     });
 
   } catch (err) {
@@ -1261,11 +1244,11 @@ const registerChild = async (req, res) => {
     mother_id,
   } = req.body;
 
-  const hospitalEvidencePath = normalizeUploadPath(req.file);
+  const hospitalEvidencePath = null; // No longer required
 
   try {
     const [residentRows] = await pool.query(
-      `SELECT id, firstname, lastname FROM residents WHERE user_id = ? LIMIT 1`,
+      `SELECT id, firstname, lastname, marital_status FROM residents WHERE user_id = ? LIMIT 1`,
       [req.user.id]
     );
 
@@ -1282,6 +1265,29 @@ const registerChild = async (req, res) => {
       return res.status(400).json({ error: 'You cannot register yourself as a child.' });
     }
 
+    if (currentResident.marital_status === 'single') {
+      return res.status(400).json({ error: 'A single person cannot register a child. An active marriage is required.' });
+    }
+
+    const [activeMarriages] = await pool.query(
+      `SELECT marriage_date FROM marriage_relationships 
+       WHERE (husband_id = ? OR wife_id = ?) AND status = 'active'
+       ORDER BY marriage_date DESC LIMIT 1`,
+      [currentResidentId, currentResidentId]
+    );
+
+    if (activeMarriages.length === 0) {
+      return res.status(400).json({ error: 'You must have an active marriage registration to register a child.' });
+    }
+
+    const marriageDate = new Date(activeMarriages[0].marriage_date);
+    const requiredDate = new Date(marriageDate);
+    requiredDate.setMonth(requiredDate.getMonth() + 18);
+    
+    if (new Date() < requiredDate) {
+      return res.status(400).json({ error: 'You can only register for a child birth certificate after at least 1 year and 6 months (18 months) have passed since your marriage date.' });
+    }
+
     const parsedFatherId = father_id ? Number(father_id) : null;
     const parsedMotherId = mother_id ? Number(mother_id) : null;
 
@@ -1295,7 +1301,7 @@ const registerChild = async (req, res) => {
     const [result] = await pool.query(
       `INSERT INTO children (firstname, lastname, gender, birth_date, birthplace, father_id, mother_id, hospital_evidence, is_alive)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,
-      [firstname, lastname, gender, birth_date, birthplace, parsedFatherId, parsedMotherId, hospitalEvidencePath]
+      [firstname, lastname, gender, birth_date, birthplace, parsedFatherId, parsedMotherId, null]
     );
 
     logger.info(`Child ${result.insertId} registered by resident ${currentResidentId}`);
@@ -1359,17 +1365,29 @@ const createMarriageRelationship = async (req, res) => {
     const wife_id = currentResident.gender === 'female' ? currentResident.id : spouse_id;
 
     const [result] = await pool.query(
-      `INSERT INTO marriage_relationships (husband_id, wife_id, marriage_date, marriage_place, status)
-       VALUES (?, ?, ?, ?, 'pending')`,
-      [husband_id, wife_id, marriage_date, marriage_place]
+      `INSERT INTO marriage_relationships (husband_id, wife_id, applicant_id, marriage_date, marriage_place, status)
+       VALUES (?, ?, ?, ?, ?, 'pending')`,
+      [husband_id, wife_id, currentResident.id, marriage_date, marriage_place]
     );
 
-    // Insert notification for spouse
+    // Notify ONLY User B (the target spouse) — never the applicant
     if (spouse.user_id) {
-       await pool.query(
-          `INSERT INTO user_notifications (user_id, title, body, link_path) VALUES (?, ?, ?, ?)`,
-          [spouse.user_id, 'Marriage Request', `${currentResident.firstname} ${currentResident.lastname} has requested to register a marriage with you.`, '/dashboard']
+       // Prevent duplicate pending notifications for same relationship
+       const [existingNotif] = await pool.query(
+         `SELECT id FROM user_notifications WHERE user_id = ? AND title = 'Marriage Request' AND body LIKE ? LIMIT 1`,
+         [spouse.user_id, `%${currentResident.firstname} ${currentResident.lastname}%`]
        );
+       if (existingNotif.length === 0) {
+         await pool.query(
+           `INSERT INTO user_notifications (user_id, title, body, link_path) VALUES (?, ?, ?, ?)`,
+           [
+             spouse.user_id,
+             'Marriage Request',
+             `${currentResident.firstname} ${currentResident.lastname} has sent you a marriage registration request. Please review and respond from your Marriage Requests tab.`,
+             '/dashboard'
+           ]
+         );
+       }
     }
 
     logger.info(`Marriage relationship ${result.insertId} created (pending) by resident ${currentResident.id}`);
@@ -1433,15 +1451,19 @@ const getPendingMarriageRequests = async (req, res) => {
 
     const residentId = residentRows[0].id;
 
+    // Only return requests where this resident is the TARGET (not the applicant)
+    // This prevents User A from seeing and approving their own request
     const [requests] = await pool.query(
-      `SELECT m.id, m.husband_id, m.wife_id, m.marriage_date, m.marriage_place, m.status, m.created_at,
+      `SELECT m.id, m.husband_id, m.wife_id, m.applicant_id, m.marriage_date, m.marriage_place, m.status, m.created_at,
          h.firstname AS h_firstname, h.lastname AS h_lastname,
          w.firstname AS w_firstname, w.lastname AS w_lastname
        FROM marriage_relationships m
        INNER JOIN residents h ON m.husband_id = h.id
        INNER JOIN residents w ON m.wife_id = w.id
-       WHERE (m.husband_id = ? OR m.wife_id = ?) AND m.status = 'pending'`,
-      [residentId, residentId]
+       WHERE (m.husband_id = ? OR m.wife_id = ?)
+         AND m.status = 'pending'
+         AND m.applicant_id != ?`,
+      [residentId, residentId, residentId]
     );
 
     return res.status(200).json({ requests });
@@ -1481,8 +1503,14 @@ const respondToMarriageRequest = async (req, res) => {
 
     const relationship = relationshipRows[0];
 
+    // Must be a party to this marriage
     if (relationship.husband_id !== residentId && relationship.wife_id !== residentId) {
        return res.status(403).json({ error: 'You are not authorized to respond to this request.' });
+    }
+
+    // Block User A (the applicant) from approving their own request
+    if (relationship.applicant_id === residentId) {
+       return res.status(403).json({ error: 'You cannot approve or reject your own marriage request. Only the recipient can respond.' });
     }
 
     const newStatus = action === 'approve' ? 'active' : 'rejected';
@@ -1491,6 +1519,43 @@ const respondToMarriageRequest = async (req, res) => {
        `UPDATE marriage_relationships SET status = ? WHERE id = ?`,
        [newStatus, relationshipId]
     );
+
+    if (action === 'approve') {
+       // Update the marital_status and spouse_id of both users
+       await pool.query(
+         `UPDATE residents SET marital_status = 'married', spouse_id = ? WHERE id = ?`,
+         [relationship.wife_id, relationship.husband_id]
+       );
+       await pool.query(
+         `UPDATE residents SET marital_status = 'married', spouse_id = ? WHERE id = ?`,
+         [relationship.husband_id, relationship.wife_id]
+       );
+
+       // Notify both users of the successful approval — they must still apply for the certificate
+       const [[husbandUser]] = await pool.query(`SELECT user_id FROM residents WHERE id = ? LIMIT 1`, [relationship.husband_id]);
+       const [[wifeUser]] = await pool.query(`SELECT user_id FROM residents WHERE id = ? LIMIT 1`, [relationship.wife_id]);
+       const notifyIds = [husbandUser?.user_id, wifeUser?.user_id].filter(Boolean);
+       for (const uid of notifyIds) {
+         await pool.query(
+           `INSERT INTO user_notifications (user_id, title, body, link_path) VALUES (?, ?, ?, ?)`,
+           [
+             uid,
+             'Marriage Verified — Apply for Certificate',
+             'Your marriage registration has been verified and approved by both parties. Your records have been updated. To receive your marriage certificate, please go to the Marriage Certificate section and submit a formal certificate application. The application will then go through the standard admin review process.',
+             '/apply/marriage'
+           ]
+         );
+       }
+    } else {
+       // Notify User A (the applicant) that the request was rejected
+       const [[applicantUser]] = await pool.query(`SELECT user_id FROM residents WHERE id = ? LIMIT 1`, [relationship.applicant_id]);
+       if (applicantUser?.user_id) {
+         await pool.query(
+           `INSERT INTO user_notifications (user_id, title, body, link_path) VALUES (?, ?, ?, ?)`,
+           [applicantUser.user_id, 'Marriage Request Rejected', 'Your marriage registration request was declined by the other party.', '/dashboard']
+         );
+       }
+    }
 
     return res.status(200).json({ message: `Marriage request ${newStatus} successfully.` });
   } catch (err) {
