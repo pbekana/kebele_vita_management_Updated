@@ -105,6 +105,8 @@ const {
   registerChild,
   createMarriageRelationship,
   getMarriageRelationships,
+  getPendingMarriageRequests,
+  respondToMarriageRequest,
 } = require('../controllers/residentController');
 
 const CERT_IMAGE_UPLOAD_DIR = path.join(__dirname, '..', 'uploads', 'certificates', 'images');
@@ -255,6 +257,15 @@ router.post(
     body('marriage_place').notEmpty().withMessage('Marriage place is required'),
   ],
   createMarriageRelationship
+);
+
+router.get('/marriage-relationships/pending', getPendingMarriageRequests);
+router.post(
+  '/marriage-relationships/:id/respond',
+  [
+    body('action').isIn(['approve', 'reject']).withMessage('Action must be approve or reject'),
+  ],
+  respondToMarriageRequest
 );
 
 // =======================

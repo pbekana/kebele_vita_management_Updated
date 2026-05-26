@@ -277,7 +277,7 @@ const ApplyCertificate = () => {
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        notifySuccess("Marriage relationship created. Loading preview...");
+        notifySuccess("Marriage request sent! Waiting for spouse to approve. You will be able to apply for the certificate once they accept.");
       } else if (needsDeathRegistration) {
         const payload = new FormData();
         payload.append('deceased_person_id', regData.deceased_person_id);
@@ -475,6 +475,9 @@ const ApplyCertificate = () => {
                       ) : (
                         <div className="grid gap-4">
                           <h3 className="text-lg font-semibold mb-2">Marriage Registration</h3>
+                          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#1d4ed8', marginBottom: 4 }}>
+                            ℹ️ <strong>Two-Step Approval:</strong> After you submit, a request will be sent to your spouse. They must log in and approve the request from their <em>Marriage Requests</em> tab before a certificate can be issued.
+                          </div>
                           <div><label className="block text-sm font-medium mb-1">Spouse Resident ID</label><input type="number" name="spouse_id" value={regData.spouse_id} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
                           <div><label className="block text-sm font-medium mb-1">Marriage Date</label><input type="date" name="marriage_date" value={regData.marriage_date} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>
                           <div><label className="block text-sm font-medium mb-1">Marriage Place</label><input type="text" name="marriage_place" value={regData.marriage_place} onChange={handleRegChange} required className="w-full p-3 border rounded-xl" /></div>

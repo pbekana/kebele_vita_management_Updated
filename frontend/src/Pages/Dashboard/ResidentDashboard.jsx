@@ -905,6 +905,10 @@ const ResidentDashboard = () => {
   const [deathReportSubmitted, setDeathReportSubmitted] = useState(false);
   const [deathReportLoading, setDeathReportLoading] = useState(false);
 
+  // Marriage approval state
+  const [pendingMarriageRequests, setPendingMarriageRequests] = useState([]);
+  const [marriageRespondLoading, setMarriageRespondLoading] = useState({});
+
 
   const [certificates, setCertificates] = useState([]);
   const [userProfile, setUserProfile] = useState({
@@ -1003,6 +1007,14 @@ const ResidentDashboard = () => {
         // 3. Fetch Reports
         const reportsRes = await axios.get("http://localhost:5000/api/residents/feedback", config);
         setMyReports(reportsRes.data.reports || []);
+
+        // 4. Fetch Pending Marriage Requests
+        try {
+          const marriageRes = await axios.get("http://localhost:5000/api/residents/marriage-relationships/pending", config);
+          setPendingMarriageRequests(marriageRes.data.requests || []);
+        } catch (marriageErr) {
+          console.warn("Could not load pending marriage requests:", marriageErr.message);
+        }
       } catch (err) {
         console.error("Error loading resident dashboard data:", err);
         setCertFetchError(err.response?.data?.error || err.message || "Could not load your dashboard data.");
@@ -1420,15 +1432,30 @@ const ResidentDashboard = () => {
               { id: 'certificates', label: 'Certificates', Icon: FileText },
               { id: 'report', label: 'Report Issue', Icon: AlertTriangle },
               { id: 'death_report', label: 'Death Reporting', Icon: Shield },
+              { id: 'marriage_requests', label: 'Marriage Requests', Icon: CheckCircle, badge: pendingMarriageRequests.length },
               { id: 'profile', label: 'My Profile', Icon: User },
-            ].map(({ id, label, Icon }) => (
+            ].map(({ id, label, Icon, badge }) => (
               <button
                 key={id}
                 className={`kd-nav-btn ${activeTab === id ? 'active' : ''}`}
                 onClick={() => setActiveTab(id)}
+                style={{ position: 'relative' }}
               >
                 <Icon />
                 {label}
+                {badge > 0 && (
+                  <span style={{
+                    marginLeft: 'auto',
+                    background: '#ef4444',
+                    color: '#fff',
+                    borderRadius: '999px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    padding: '1px 7px',
+                    lineHeight: 1.5,
+                    flexShrink: 0,
+                  }}>{badge}</span>
+                )}
               </button>
             ))}
           </nav>
@@ -1884,6 +1911,147 @@ const ResidentDashboard = () => {
                     </div>
                   )}
                 </div>
+              </div>
+            </>
+          )}
+
+          {/* ── MARRIAGE REQUESTS TAB ── */}
+          {activeTab === 'marriage_requests' && (
+            <>
+              <div className="kd-section-hd">Marriage Requests</div>
+              <div style={{ maxWidth: 800 }}>
+                {pendingMarriageRequests.length === 0 ? (
+                  <div style={{
+                    background: '#fff',
+                    borderRadius: 18,
+                    border: '1px solid #e8edf8',
+                    padding: '48px 32px',
+                    textAlign: 'center',
+                    color: '#94a3b8'
+                  }}>
+                    <div style={{ fontSize: 48, marginBottom: 16 }}>💍</div>
+                    <div style={{ fontWeight: 700, fontSize: 16, color: '#1e293b', marginBottom: 8 }}>No Pending Marriage Requests</div>
+                    <div style={{ fontSize: 14 }}>You have no pending marriage registration requests to respond to.</div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {pendingMarriageRequests.map(req => {
+                      const husbandFull = `${req.h_firstname} ${req.h_lastname}`;
+                      const wifeFull = `${req.w_firstname} ${req.w_lastname}`;
+                      const isLoading = marriageRespondLoading[req.id];
+                      return (
+                        <div key={req.id} style={{
+                          background: '#fff',
+                          borderRadius: 18,
+                          border: '1.5px solid #e8edf8',
+                          padding: '24px 28px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 24,
+                          flexWrap: 'wrap',
+                        }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                              <span style={{
+                                background: '#fffbeb',
+                                color: '#b45309',
+                                borderRadius: 999,
+                                fontSize: 10,
+                                fontWeight: 700,
+                                padding: '2px 10px',
+                                letterSpacing: '0.06em',
+                                textTransform: 'uppercase'
+                              }}>Pending Approval</span>
+                            </div>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>
+                              💍 {husbandFull} &amp; {wifeFull}
+                            </div>
+                            <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>
+                              <span style={{ marginRight: 16 }}>📅 Marriage Date: {req.marriage_date ? new Date(req.marriage_date).toLocaleDateString() : '—'}</span>
+                              <span>📍 Place: {req.marriage_place || '—'}</span>
+                            </div>
+                            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>
+                              Requested on: {new Date(req.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
+                            <button
+                              disabled={isLoading}
+                              onClick={async () => {
+                                setMarriageRespondLoading(prev => ({ ...prev, [req.id]: true }));
+                                try {
+                                  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                                  await axios.post(
+                                    `http://localhost:5000/api/residents/marriage-relationships/${req.id}/respond`,
+                                    { action: 'approve' },
+                                    { headers: { Authorization: `Bearer ${token}` } }
+                                  );
+                                  notifySuccess('Marriage request approved! You can now apply for a marriage certificate.');
+                                  setPendingMarriageRequests(prev => prev.filter(r => r.id !== req.id));
+                                } catch (err) {
+                                  notifyError(err.response?.data?.error || 'Failed to approve request.');
+                                } finally {
+                                  setMarriageRespondLoading(prev => ({ ...prev, [req.id]: false }));
+                                }
+                              }}
+                              style={{
+                                padding: '10px 22px',
+                                background: '#16a34a',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: 10,
+                                fontSize: 14,
+                                fontWeight: 700,
+                                cursor: isLoading ? 'not-allowed' : 'pointer',
+                                opacity: isLoading ? 0.6 : 1,
+                                fontFamily: 'inherit',
+                                transition: 'background 0.15s',
+                              }}
+                            >
+                              {isLoading ? '...' : '✓ Approve'}
+                            </button>
+                            <button
+                              disabled={isLoading}
+                              onClick={async () => {
+                                setMarriageRespondLoading(prev => ({ ...prev, [req.id]: true }));
+                                try {
+                                  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                                  await axios.post(
+                                    `http://localhost:5000/api/residents/marriage-relationships/${req.id}/respond`,
+                                    { action: 'reject' },
+                                    { headers: { Authorization: `Bearer ${token}` } }
+                                  );
+                                  notifySuccess('Marriage request rejected.');
+                                  setPendingMarriageRequests(prev => prev.filter(r => r.id !== req.id));
+                                } catch (err) {
+                                  notifyError(err.response?.data?.error || 'Failed to reject request.');
+                                } finally {
+                                  setMarriageRespondLoading(prev => ({ ...prev, [req.id]: false }));
+                                }
+                              }}
+                              style={{
+                                padding: '10px 22px',
+                                background: '#fff',
+                                color: '#b91c1c',
+                                border: '1.5px solid #fca5a5',
+                                borderRadius: 10,
+                                fontSize: 14,
+                                fontWeight: 700,
+                                cursor: isLoading ? 'not-allowed' : 'pointer',
+                                opacity: isLoading ? 0.6 : 1,
+                                fontFamily: 'inherit',
+                                transition: 'background 0.15s',
+                              }}
+                            >
+                              {isLoading ? '...' : '✗ Reject'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </>
           )}

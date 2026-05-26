@@ -452,3 +452,22 @@
 [2026-05-26T01:15:33.499Z] [INFO] [PDF] Phone: 0911223344, Occupation: Farmer
 [2026-05-26T01:15:33.499Z] [INFO] [PDF DEATH] Deceased: Chaltu Roba, DOD: Tue May 26 2026 00:00:00 GMT+0300 (East Africa Time), Cause: fhfhj
 [2026-05-26T01:15:33.500Z] [INFO] [PDF] Calling generateCertificate with certificate object containing 70 fields
+[2026-05-26T02:31:45.027Z] [INFO] Server running on port 5000
+[2026-05-26T02:34:30.685Z] [INFO] Registration OTP email sent to: peterbekana35@gmail.com
+[2026-05-26T02:34:30.803Z] [INFO] Resident registered, awaiting OTP verification: peterbekana35@gmail.com
+[2026-05-26T02:35:50.258Z] [INFO] User verified OTP successfully: peterbekana35@gmail.com
+[2026-05-26T02:37:12.434Z] [INFO] Forgot password OTP sent via Email/SMS for peterbekana35@gmail.com
+[2026-05-26T02:38:32.477Z] [INFO] Password reset successfully for: peterbekana35@gmail.com
+[2026-05-26T02:39:47.985Z] [INFO] Marriage relationship 4 created by resident 13
+[2026-05-26T03:30:51.743Z] [INFO] Registration OTP email sent to: peterbekana79@gmail.com
+[2026-05-26T03:30:51.836Z] [INFO] Resident registered, awaiting OTP verification: peterbekana79@gmail.com
+[2026-05-26T03:32:01.859Z] [INFO] User verified OTP successfully: peterbekana79@gmail.com
+[2026-05-26T03:35:57.377Z] [INFO] Marriage relationship 5 created by resident 13
+[2026-05-26T03:36:19.251Z] [INFO] Certificate request 27 created by resident 13
+[2026-05-26T03:37:40.919Z] [INFO] Admin 1 assigned task 19
+[2026-05-26T03:37:56.892Z] [INFO] Admin 1 assigned certificate 27 to staff 3
+[2026-05-26T03:38:52.791Z] [INFO] Staff 3 prepared certificate 27 for admin approval
+[2026-05-26T03:39:19.555Z] [INFO] Admin 1 approved certificate 27
+[2026-05-26T03:40:48.685Z] [INFO] Server running on port 5000
+[2026-05-26T03:45:16.797Z] [INFO] Server running on port 5000
+[2026-05-26T03:47:35.711Z] [INFO] Server running on port 5000

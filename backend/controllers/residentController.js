@@ -181,16 +181,34 @@ const requestCertificate = async (req, res) => {
     let final_death_place = death_place || null;
 
     if (certificate_type === 'birth') {
-      const [matchingChildren] = await connection.query(
-        `SELECT id FROM children WHERE lastname = ? LIMIT 1`,
-        [resident.firstname]
-      );
+      if (child_name) {
+        // Child birth certificate
+        const childFirstName = child_name.split(' ')[0] || '';
+        const [matchingChildren] = await connection.query(
+          `SELECT id FROM children WHERE (father_id = ? OR mother_id = ?) AND firstname = ? LIMIT 1`,
+          [resident.id, resident.id, childFirstName]
+        );
 
-      if (matchingChildren.length === 0 && !hospitalEvidencePath) {
+        if (matchingChildren.length === 0) {
+          await connection.rollback();
+          return res.status(400).json({
+            error: 'No registered child record was found matching this name under your profile. Please register the child first.',
+          });
+        }
+      } else if (!full_name) {
         await connection.rollback();
-        return res.status(400).json({
-          error: 'No child record was found with your name. Please upload a hospital evidence document before we can continue.',
-        });
+        return res.status(400).json({ error: 'Please provide either a child name or your full name.' });
+      }
+    }
+
+    if (certificate_type === 'marriage') {
+      const [activeMarriage] = await connection.query(
+        `SELECT id FROM marriage_relationships WHERE (husband_id = ? OR wife_id = ?) AND status = 'active' LIMIT 1`,
+        [resident.id, resident.id]
+      );
+      if (activeMarriage.length === 0) {
+        await connection.rollback();
+        return res.status(400).json({ error: 'You must have an approved, active marriage registration before requesting a marriage certificate. If your registration is pending, please wait for your spouse to approve it.' });
       }
     }
 
@@ -1247,7 +1265,7 @@ const registerChild = async (req, res) => {
 
   try {
     const [residentRows] = await pool.query(
-      `SELECT id FROM residents WHERE user_id = ? LIMIT 1`,
+      `SELECT id, firstname, lastname FROM residents WHERE user_id = ? LIMIT 1`,
       [req.user.id]
     );
 
@@ -1257,7 +1275,12 @@ const registerChild = async (req, res) => {
       });
     }
 
-    const currentResidentId = residentRows[0].id;
+    const currentResident = residentRows[0];
+    const currentResidentId = currentResident.id;
+
+    if (firstname.toLowerCase() === currentResident.firstname.toLowerCase() && lastname.toLowerCase() === currentResident.lastname.toLowerCase()) {
+      return res.status(400).json({ error: 'You cannot register yourself as a child.' });
+    }
 
     const parsedFatherId = father_id ? Number(father_id) : null;
     const parsedMotherId = mother_id ? Number(mother_id) : null;
@@ -1298,7 +1321,7 @@ const createMarriageRelationship = async (req, res) => {
 
   try {
     const [residentRows] = await pool.query(
-      `SELECT id, gender FROM residents WHERE user_id = ? LIMIT 1`,
+      `SELECT id, gender, firstname, lastname FROM residents WHERE user_id = ? LIMIT 1`,
       [req.user.id]
     );
 
@@ -1307,19 +1330,52 @@ const createMarriageRelationship = async (req, res) => {
     }
 
     const currentResident = residentRows[0];
+
+    // Fetch spouse
+    const [spouseRows] = await pool.query(
+      `SELECT id, gender, user_id FROM residents WHERE id = ? LIMIT 1`,
+      [spouse_id]
+    );
+    if (spouseRows.length === 0) {
+       return res.status(404).json({ error: 'Spouse profile not found' });
+    }
+    const spouse = spouseRows[0];
+    
+    // Gender check
+    if (currentResident.gender === spouse.gender) {
+       return res.status(400).json({ error: 'Marriage between same gender is not allowed.' });
+    }
+    
+    // Polygamy check
+    const [existing] = await pool.query(
+       `SELECT id FROM marriage_relationships WHERE (husband_id IN (?, ?) OR wife_id IN (?, ?)) AND status IN ('active', 'pending')`,
+       [currentResident.id, spouse.id, currentResident.id, spouse.id]
+    );
+    if (existing.length > 0) {
+       return res.status(400).json({ error: 'One or both individuals already have an active or pending marriage.' });
+    }
+
     const husband_id = currentResident.gender === 'male' ? currentResident.id : spouse_id;
     const wife_id = currentResident.gender === 'female' ? currentResident.id : spouse_id;
 
     const [result] = await pool.query(
       `INSERT INTO marriage_relationships (husband_id, wife_id, marriage_date, marriage_place, status)
-       VALUES (?, ?, ?, ?, 'active')`,
+       VALUES (?, ?, ?, ?, 'pending')`,
       [husband_id, wife_id, marriage_date, marriage_place]
     );
 
-    logger.info(`Marriage relationship ${result.insertId} created by resident ${currentResident.id}`);
+    // Insert notification for spouse
+    if (spouse.user_id) {
+       await pool.query(
+          `INSERT INTO user_notifications (user_id, title, body, link_path) VALUES (?, ?, ?, ?)`,
+          [spouse.user_id, 'Marriage Request', `${currentResident.firstname} ${currentResident.lastname} has requested to register a marriage with you.`, '/dashboard']
+       );
+    }
+
+    logger.info(`Marriage relationship ${result.insertId} created (pending) by resident ${currentResident.id}`);
 
     return res.status(201).json({
-      message: 'Marriage relationship created successfully',
+      message: 'Marriage relationship created successfully. Waiting for spouse approval.',
       relationship_id: result.insertId,
     });
 
@@ -1364,6 +1420,84 @@ const getMarriageRelationships = async (req, res) => {
   }
 };
 
+const getPendingMarriageRequests = async (req, res) => {
+  try {
+    const [residentRows] = await pool.query(
+      `SELECT id FROM residents WHERE user_id = ? LIMIT 1`,
+      [req.user.id]
+    );
+
+    if (residentRows.length === 0) {
+      return res.status(404).json({ error: 'Resident profile not found' });
+    }
+
+    const residentId = residentRows[0].id;
+
+    const [requests] = await pool.query(
+      `SELECT m.id, m.husband_id, m.wife_id, m.marriage_date, m.marriage_place, m.status, m.created_at,
+         h.firstname AS h_firstname, h.lastname AS h_lastname,
+         w.firstname AS w_firstname, w.lastname AS w_lastname
+       FROM marriage_relationships m
+       INNER JOIN residents h ON m.husband_id = h.id
+       INNER JOIN residents w ON m.wife_id = w.id
+       WHERE (m.husband_id = ? OR m.wife_id = ?) AND m.status = 'pending'`,
+      [residentId, residentId]
+    );
+
+    return res.status(200).json({ requests });
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
+const respondToMarriageRequest = async (req, res) => {
+  const relationshipId = Number(req.params.id);
+  const { action } = req.body;
+
+  if (!['approve', 'reject'].includes(action)) {
+     return res.status(400).json({ error: 'Invalid action. Must be approve or reject.' });
+  }
+
+  try {
+    const [residentRows] = await pool.query(
+      `SELECT id FROM residents WHERE user_id = ? LIMIT 1`,
+      [req.user.id]
+    );
+
+    if (residentRows.length === 0) {
+      return res.status(404).json({ error: 'Resident profile not found' });
+    }
+
+    const residentId = residentRows[0].id;
+
+    const [relationshipRows] = await pool.query(
+       `SELECT * FROM marriage_relationships WHERE id = ? LIMIT 1`,
+       [relationshipId]
+    );
+
+    if (relationshipRows.length === 0) {
+       return res.status(404).json({ error: 'Marriage relationship not found' });
+    }
+
+    const relationship = relationshipRows[0];
+
+    if (relationship.husband_id !== residentId && relationship.wife_id !== residentId) {
+       return res.status(403).json({ error: 'You are not authorized to respond to this request.' });
+    }
+
+    const newStatus = action === 'approve' ? 'active' : 'rejected';
+
+    await pool.query(
+       `UPDATE marriage_relationships SET status = ? WHERE id = ?`,
+       [newStatus, relationshipId]
+    );
+
+    return res.status(200).json({ message: `Marriage request ${newStatus} successfully.` });
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
 module.exports = {
   getResidentById,
   requestCertificate,
@@ -1380,4 +1514,6 @@ module.exports = {
   registerChild,
   createMarriageRelationship,
   getMarriageRelationships,
+  getPendingMarriageRequests,
+  respondToMarriageRequest,
 };
