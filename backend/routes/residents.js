@@ -232,7 +232,6 @@ router.get('/children', getMyChildren);
 // Register a new child
 router.post(
   '/children',
-  upload.single('hospitalEvidence'),
   [
     body('firstname').notEmpty().withMessage('Child firstname is required'),
     body('lastname').notEmpty().withMessage('Child lastname is required'),
@@ -275,7 +274,6 @@ router.post(
 // Create a death report
 router.post(
   '/death-report',
-  upload.single('evidence_document'),
   [
     body('deceased_person_id').isInt().withMessage('Deceased person ID is required'),
     body('family_relationship_type').notEmpty().withMessage('Relationship type is required'),

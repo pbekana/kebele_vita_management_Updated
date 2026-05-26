@@ -457,62 +457,34 @@ const approveCertificate = async (req, res) => {
       await connection.beginTransaction();
 
       if (certificate.certificate_type === 'marriage') {
-        const requesterName = `${certificate.requester_firstname} ${certificate.requester_lastname}`.trim().toLowerCase();
-        const husbandName = (certificate.husband_name || '').trim();
-        const wifeName = (certificate.wife_name || '').trim();
+        // Prefer to verify an active (spouse-approved) marriage relationship exists for this resident.
+        // If no active relationship record exists, fall back to the resident's recorded
+        // marital status (as included on the certificate) to avoid rejecting valid cases
+        // where the relationship record may be missing but the residents table reflects marriage.
+        const [activeMarriage] = await connection.query(
+          `SELECT id FROM marriage_relationships
+           WHERE (husband_id = ? OR wife_id = ?) AND status = 'active'
+           LIMIT 1`,
+          [certificate.requester_resident_id, certificate.requester_resident_id]
+        );
 
-        const spouseName = [husbandName, wifeName].find((name) => {
-          const lowered = name.toLowerCase();
-          return lowered !== requesterName && name.length > 0;
-        }) || '';
-
-        if (certificate.requester_marital_status === 'married') {
-          await connection.rollback();
-          return res.status(400).json({
-            error: 'This marriage certificate cannot be approved because the requesting resident is already married.',
-          });
-        }
-
-        if (spouseName) {
-          const parts = spouseName.split(/\s+/);
-          const spouseFirst = parts[0] || '';
-          const spouseLast = parts.slice(1).join(' ') || '';
-          const [spouseRows] = await connection.query(
-            `SELECT id, marital_status FROM residents
-             WHERE firstname = ? AND lastname = ?
-             LIMIT 1`,
-            [spouseFirst, spouseLast]
-          );
-
-          if (spouseRows.length > 0) {
-            const spouse = spouseRows[0];
-            if (spouse.marital_status === 'married') {
-              await connection.rollback();
-              return res.status(400).json({
-                error: 'This marriage certificate cannot be approved because the named spouse is already married.',
-              });
-            }
-
-            await connection.query(
-              `UPDATE residents SET marital_status = 'married', spouse_id = ? WHERE id = ?`,
-              [spouse.id, certificate.requester_resident_id]
+        if (activeMarriage.length === 0) {
+          const reqMaritalStatus = (certificate.requester_marital_status || '').toLowerCase();
+          if (reqMaritalStatus === 'married') {
+            logger.warn(
+              `Admin ${req.user.id} approving certificate ${certificateId}: resident marked as 'married' but no active marriage_relationship found; proceeding.`
             );
-            await connection.query(
-              `UPDATE residents SET marital_status = 'married', spouse_id = ? WHERE id = ?`,
-              [certificate.requester_resident_id, spouse.id]
-            );
+            // proceed with approval — this preserves existing behavior for properly
+            // established marriages while avoiding false negatives when the
+            // relationship record is missing.
           } else {
-            await connection.query(
-              `UPDATE residents SET marital_status = 'married' WHERE id = ?`,
-              [certificate.requester_resident_id]
-            );
+            await connection.rollback();
+            return res.status(400).json({
+              error: 'This marriage certificate cannot be approved because no active, spouse-verified marriage registration was found for this resident.',
+            });
           }
-        } else {
-          await connection.query(
-            `UPDATE residents SET marital_status = 'married' WHERE id = ?`,
-            [certificate.requester_resident_id]
-          );
         }
+        // marital_status and spouse_id are expected to be set when relationship approval occurs.
       }
 
       if (certificate.certificate_type === 'birth') {

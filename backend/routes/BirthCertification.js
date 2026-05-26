@@ -28,7 +28,7 @@ router.post("/", protect, async (req, res) => {
 
     // 1. GET REQUESTER (resident)
     const [requesterRows] = await pool.query(
-      `SELECT id FROM residents WHERE user_id = ?`,
+      `SELECT id, marital_status FROM residents WHERE user_id = ?`,
       [req.user.id]
     );
 
@@ -38,7 +38,14 @@ router.post("/", protect, async (req, res) => {
       });
     }
 
-    const requester_id = requesterRows[0].id;
+    const requester = requesterRows[0];
+    if (requester.marital_status === 'single') {
+      return res.status(400).json({
+        error: 'You are currently single, so you cannot apply for a child birth certificate at this time. You can still apply for your own birth certificate.'
+      });
+    }
+
+    const requester_id = requester.id;
 
     // 2. CHECK CHILD EXISTS
     const [childRows] = await pool.query(

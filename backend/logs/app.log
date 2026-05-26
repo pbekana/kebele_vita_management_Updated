@@ -471,3 +471,58 @@
 [2026-05-26T03:40:48.685Z] [INFO] Server running on port 5000
 [2026-05-26T03:45:16.797Z] [INFO] Server running on port 5000
 [2026-05-26T03:47:35.711Z] [INFO] Server running on port 5000
+[2026-05-26T04:11:26.977Z] [INFO] Server running on port 5000
+[2026-05-26T04:14:59.394Z] [INFO] Server running on port 5000
+[2026-05-26T04:37:27.365Z] [INFO] Server running on port 5000
+[2026-05-26T04:43:34.085Z] [INFO] Marriage relationship 6 created (pending) by resident 13
+[2026-05-26T04:58:33.884Z] [INFO] Server running on port 5000
+[2026-05-26T05:00:04.643Z] [INFO] Server running on port 5000
+[2026-05-26T05:01:54.634Z] [INFO] Marriage relationship 7 created (pending) by resident 13
+[2026-05-26T05:03:05.324Z] [INFO] Certificate request 28 created by resident 13
+[2026-05-26T05:03:28.907Z] [INFO] Admin 1 assigned certificate 28 to staff 3
+[2026-05-26T05:04:06.182Z] [INFO] Staff 3 prepared certificate 28 for admin approval
+[2026-05-26T05:14:51.236Z] [INFO] Server running on port 5000
+[2026-05-26T05:16:12.697Z] [INFO] Admin 1 rejected certificate 28
+[2026-05-26T05:17:19.563Z] [INFO] Server running on port 5000
+[2026-05-26T05:18:41.692Z] [INFO] Marriage relationship 8 created (pending) by resident 13
+[2026-05-26T05:19:49.751Z] [INFO] Certificate request 29 created by resident 13
+[2026-05-26T05:20:10.421Z] [INFO] Admin 1 assigned certificate 29 to staff 3
+[2026-05-26T05:21:03.055Z] [INFO] Staff 3 prepared certificate 29 for admin approval
+[2026-05-26T05:24:45.750Z] [INFO] Server running on port 5000
+[2026-05-26T05:27:00.896Z] [INFO] Marriage relationship 9 created (pending) by resident 13
+[2026-05-26T05:28:06.345Z] [INFO] Certificate request 30 created by resident 13
+[2026-05-26T05:28:24.549Z] [INFO] Admin 1 assigned certificate 30 to staff 3
+[2026-05-26T05:28:52.805Z] [INFO] Staff 3 prepared certificate 30 for admin approval
+[2026-05-26T05:42:05.431Z] [INFO] Server running on port 5000
+[2026-05-26T05:46:09.528Z] [INFO] Server running on port 5000
+[2026-05-26T05:46:50.448Z] [INFO] Marriage relationship 10 created (pending) by resident 13
+[2026-05-26T05:48:10.641Z] [INFO] Certificate request 31 created by resident 13
+[2026-05-26T05:48:32.222Z] [INFO] Admin 1 assigned certificate 31 to staff 3
+[2026-05-26T05:49:01.884Z] [INFO] Staff 3 prepared certificate 31 for admin approval
+[2026-05-26T05:49:25.819Z] [INFO] Admin 1 approved certificate 31
+[2026-05-26T05:49:54.784Z] [INFO] [PDF] Certificate ID: 31, Type: marriage
+[2026-05-26T05:49:54.784Z] [INFO] [PDF] Resident: Darsema Chala
+[2026-05-26T05:49:54.785Z] [INFO] [PDF] Phone: 0917889900, Occupation: Student
+[2026-05-26T05:49:54.785Z] [INFO] [PDF MARRIAGE] Husband: Darsema Chala (Sun Jun 25 2000 00:00:00 GMT+0300 (East Africa Time)), Wife: Iftu Negash (Fri Sep 04 1998 00:00:00 GMT+0300 (East Africa Time))
+[2026-05-26T05:49:54.786Z] [INFO] [PDF MARRIAGE] Date: Tue May 26 2026 00:00:00 GMT+0300 (East Africa Time), Place: Jimma
+[2026-05-26T05:49:54.786Z] [INFO] [PDF] Calling generateCertificate with certificate object containing 66 fields
+[2026-05-26T06:33:48.349Z] [INFO] Server running on port 5000
+[2026-05-26T07:43:00.882Z] [INFO] Server running on port 5000
+[2026-05-26T07:50:36.945Z] [ERROR] Failed to send OTP email to bekanapeter@gmail.com: getaddrinfo ENOTFOUND smtp.gmail.com
+[2026-05-26T07:50:37.038Z] [ERROR] CRITICAL: OTP email delivery failed for bekanapeter@gmail.com. OTP is stored in DB.
+[2026-05-26T07:51:44.415Z] [ERROR] Failed to resend OTP email to bekanapeter@gmail.com: getaddrinfo ENOTFOUND smtp.gmail.com
+[2026-05-26T07:53:27.114Z] [ERROR] Failed to resend OTP email to bekanapeter@gmail.com: getaddrinfo ENOTFOUND smtp.gmail.com
+[2026-05-26T07:53:30.737Z] [ERROR] Failed to resend OTP email to bekanapeter@gmail.com: getaddrinfo ENOTFOUND smtp.gmail.com
+[2026-05-26T07:53:35.851Z] [ERROR] Failed to resend OTP email to bekanapeter@gmail.com: getaddrinfo ENOTFOUND smtp.gmail.com
+[2026-05-26T07:54:38.381Z] [ERROR] Failed to resend OTP email to bekanapeter@gmail.com: getaddrinfo ENOTFOUND smtp.gmail.com
+[2026-05-26T08:01:12.956Z] [INFO] Certificate request 32 created by resident 13
+[2026-05-26T08:01:48.620Z] [INFO] Admin 1 assigned certificate 32 to staff 5
+[2026-05-26T08:03:20.838Z] [INFO] Staff 5 prepared certificate 32 for admin approval
+[2026-05-26T08:04:21.555Z] [INFO] Admin 1 approved certificate 32
+[2026-05-26T08:05:02.487Z] [INFO] [PDF] Certificate ID: 32, Type: residency-id
+[2026-05-26T08:05:02.488Z] [INFO] [PDF] Resident: Darsema Chala
+[2026-05-26T08:05:02.488Z] [INFO] [PDF] Phone: 0917889900, Occupation: Student
+[2026-05-26T08:05:02.488Z] [INFO] [PDF RESIDENCY] Gender: undefined, DOB: null, Birthplace: undefined
+[2026-05-26T08:05:02.488Z] [INFO] [PDF RESIDENCY] Father: null, Mother: null, Spouse: Iftu Negash
+[2026-05-26T08:05:02.489Z] [INFO] [PDF RESIDENCY] Address: Kebele 03, Jimma, H-411
+[2026-05-26T08:05:02.489Z] [INFO] [PDF] Calling generateCertificate with certificate object containing 67 fields
