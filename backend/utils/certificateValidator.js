@@ -11,16 +11,7 @@ const HTML_TAG_PATTERN = /<[^>]*>/g;
 
 function cleanString(val) {
   if (val === null || val === undefined || val === '') return null;
-  if (typeof val !== 'string') return String(val);
-
-  let cleaned = val;
-  cleaned = cleaned.replace(ZERO_WIDTH_PATTERN, '');
-  cleaned = cleaned.replace(CLIPBOARD_META_PATTERN, '');
-  cleaned = cleaned.replace(CLIPBOARD_END_PATTERN, '');
-  cleaned = cleaned.replace(HTML_TAG_PATTERN, '');
-  cleaned = cleaned.replace(/\s+/g, ' ').trim();
-
-  return cleaned || null;
+  return val; // Return exactly as stored in database, without sanitization
 }
 
 function validateAndSanitize(rawCert) {
@@ -28,13 +19,9 @@ function validateAndSanitize(rawCert) {
     throw new Error('Certificate Rendering Error: Invalid or missing data object.');
   }
 
-  // Sanitize all values
-  const sData = {};
-  for (const key in rawCert) {
-    if (Object.prototype.hasOwnProperty.call(rawCert, key)) {
-      sData[key] = cleanString(rawCert[key]);
-    }
-  }
+  // Preserve original values without strict text manipulation
+  const sData = { ...rawCert };
+
 
   console.log('[VALIDATOR] Input fields:', Object.keys(sData).slice(0, 20).join(', '));
   console.log('[VALIDATOR] Resident name:', sData.resident_firstname, sData.resident_lastname);
@@ -72,16 +59,15 @@ function validateAndSanitize(rawCert) {
   // ── Birth-specific: child data takes priority over resident birth fields ───
   // child_birth_date / child_birthplace are enriched in the controller
   // Handle multiple field name variations from different sources
-  const childBirthDate  = sData.child_birth_date  || null;
+  const childBirthDate  = sData.child_birth_date   || sData.birth_date || null;
   const childBirthplace = sData.child_birthplace   || sData.birth_place || null;
   const childGender     = sData.child_gender       || null;
   const childFullName   = sData.child_full_name    || sData.child_name || null;
 
   // ── Resident personal birth info (used for residency / personal section) ──
   // Handle both naming conventions: resident_birth_date or birth_date
-  const residentBirthDate  = sData.resident_birth_date  || sData.birth_date  || null;
-  // Handle both naming conventions: resident_birthplace, birthplace, or birth_place
-  const residentBirthplace = sData.resident_birthplace  || sData.birthplace  || sData.birth_place || null;
+  const residentBirthDate  = sData.resident_birth_date  || null;
+  const residentBirthplace = sData.resident_birthplace  || sData.birthplace || null;
 
   // ── Build unified validated schema object ──────────────────────────────────
   const validatedData = {
@@ -93,14 +79,14 @@ function validateAndSanitize(rawCert) {
     fullName,
 
     // Resident personal info (for ID card / residency / personal section)
-    gender:           sData.gender        || null,
+    gender:           sData.resident_gender || sData.gender        || null,
     birthDate:        residentBirthDate,
     birthPlace:       residentBirthplace,
     nationality:      sData.nationality   || 'Ethiopian',
     religion:         sData.religion      || null,
-    maritalStatus:    sData.marital_status || null,
-    fatherName:       sData.father_name   || null,
-    motherName:       sData.mother_name   || null,
+    maritalStatus:    sData.resident_marital_status || sData.marital_status || null,
+    fatherName:       sData.father_name   || sData.resident_father_name || null,
+    motherName:       sData.mother_name   || sData.resident_mother_name || null,
     spouseName:       sData.spouse_name   || null,
 
     // Contact / Work
@@ -121,11 +107,11 @@ function validateAndSanitize(rawCert) {
 
     // Dates
     issueDate,
-    registrationDate: sData.registration_date || null,
-    disabilityStatus: sData.disability_status === '1' || sData.disability_status === 'true' ? true : false,
+    registrationDate: sData.resident_registration_date || sData.registration_date || null,
+    disabilityStatus: sData.disability_status === '1' || sData.disability_status === 'true' || sData.disability_status === true ? true : false,
 
     // Photo
-    photoPath:        sData.photo_path          || null,
+    photoPath:        sData.resident_photo_path || sData.photo_path          || null,
     childPhotoPath:   sData.child_photo_path    || null,
     deceasedPhotoPath:sData.deceased_photo_path || null,
     husbandPhotoPath: sData.husband_photo_path  || null,

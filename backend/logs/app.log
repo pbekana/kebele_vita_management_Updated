@@ -365,3 +365,43 @@
 [2026-05-25T21:58:23.768Z] [INFO] [PDF RESIDENCY] Father: Daba Gurmessa, Mother: Hawwe Boru, Spouse: Tigist Alemu
 [2026-05-25T21:58:23.768Z] [INFO] [PDF RESIDENCY] Address: Kebele 02, Jimma, H-101
 [2026-05-25T21:58:23.769Z] [INFO] [PDF] Calling generateCertificate with certificate object containing 65 fields
+[2026-05-25T22:33:06.868Z] [INFO] Server running on port 5000
+[2026-05-25T22:37:02.125Z] [INFO] Certificate request 22 created by resident 7
+[2026-05-25T22:38:25.634Z] [INFO] Admin 1 assigned task 16
+[2026-05-25T22:38:46.047Z] [INFO] Admin 1 assigned certificate 22 to staff 5
+[2026-05-25T22:40:32.660Z] [INFO] Staff 5 prepared certificate 22 for admin approval
+[2026-05-25T22:40:54.626Z] [INFO] Admin 1 approved certificate 22
+[2026-05-25T22:41:12.292Z] [INFO] [PDF] Certificate ID: 22, Type: residency-id
+[2026-05-25T22:41:12.292Z] [INFO] [PDF] Resident: Gemechu Daba
+[2026-05-25T22:41:12.293Z] [INFO] [PDF] Phone: 0911223344, Occupation: Farmer
+[2026-05-25T22:41:12.305Z] [INFO] [PDF RESIDENCY] Gender: undefined, DOB: null, Birthplace: undefined
+[2026-05-25T22:41:12.306Z] [INFO] [PDF RESIDENCY] Father: null, Mother: null, Spouse: Tigist Alemu
+[2026-05-25T22:41:12.307Z] [INFO] [PDF RESIDENCY] Address: Kebele 02, Jimma, H-101
+[2026-05-25T22:41:12.307Z] [INFO] [PDF] Calling generateCertificate with certificate object containing 67 fields
+[2026-05-25T22:51:56.096Z] [INFO] Server running on port 5000
+[2026-05-25T22:53:24.487Z] [INFO] Certificate request 23 created by resident 7
+[2026-05-25T22:55:46.151Z] [INFO] Admin 1 assigned task 17
+[2026-05-25T22:55:58.590Z] [INFO] Admin 1 assigned certificate 23 to staff 5
+[2026-05-25T22:56:48.482Z] [INFO] Staff 5 prepared certificate 23 for admin approval
+[2026-05-25T22:58:13.894Z] [INFO] Admin 1 approved certificate 23
+[2026-05-25T22:58:37.442Z] [INFO] [PDF] Certificate ID: 23, Type: residency-id
+[2026-05-25T22:58:37.442Z] [INFO] [PDF] Resident: Gemechu Daba
+[2026-05-25T22:58:37.443Z] [INFO] [PDF] Phone: 0911223344, Occupation: Farmer
+[2026-05-25T22:58:37.443Z] [INFO] [PDF RESIDENCY] Gender: undefined, DOB: null, Birthplace: undefined
+[2026-05-25T22:58:37.444Z] [INFO] [PDF RESIDENCY] Father: null, Mother: null, Spouse: Tigist Alemu
+[2026-05-25T22:58:37.444Z] [INFO] [PDF RESIDENCY] Address: Kebele 02, Jimma, H-101
+[2026-05-25T22:58:37.445Z] [INFO] [PDF] Calling generateCertificate with certificate object containing 67 fields
+[2026-05-25T23:10:29.291Z] [INFO] Death report 1 created by resident 7
+[2026-05-25T23:13:09.952Z] [ERROR] Unhandled: Unexpected field
+[2026-05-25T23:24:09.713Z] [ERROR] Unhandled: Unexpected field
+[2026-05-25T23:25:37.936Z] [ERROR] Unhandled: Only image uploads are allowed
+[2026-05-25T23:26:18.134Z] [ERROR] Unhandled: Unexpected field
+[2026-05-25T23:37:13.914Z] [INFO] Server running on port 5000
+[2026-05-25T23:39:56.993Z] [INFO] Server running on port 5000
+[2026-05-25T23:43:18.772Z] [ERROR] Unhandled: Only image uploads are allowed for photo fields
+[2026-05-25T23:45:15.679Z] [ERROR] Unhandled: Only image uploads are allowed for photo fields
+[2026-05-25T23:51:43.148Z] [INFO] Server running on port 5000
+[2026-05-25T23:52:57.144Z] [INFO] Server running on port 5000
+[2026-05-25T23:53:12.710Z] [ERROR] Unhandled: Only image uploads are allowed for photo fields
+[2026-05-25T23:54:46.231Z] [ERROR] Unhandled: Only image uploads are allowed for photo fields
+[2026-05-25T23:55:51.785Z] [INFO] Death report 2 created by resident 7

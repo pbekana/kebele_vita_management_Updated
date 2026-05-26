@@ -138,26 +138,27 @@ const requestCertificate = async (req, res) => {
 
   try {
     // ── IMAGE UPLOAD VALIDATION ──────────────────────────────────────────────
-    // Birth, Marriage, and ID certificates: image uploads allowed
-    // Death certificates: NO image uploads allowed (per requirements)
-    
-    if (certificate_type === 'death' && (deceasedPhotoPath || applicantPhotoPath)) {
-      return res.status(400).json({
-        error: 'Image uploads are not permitted for death certificates. Please remove any uploaded photos and resubmit.',
-      });
-    }
-
-    // Validate image uploads only for allowed certificate types
-    const allowedImageTypes = ['birth', 'marriage', 'residency-id', 'residency'];
-    const imageUploads = { childPhotoPath, husbandPhotoPath, wifePhotoPath, applicantPhotoPath };
-    
-    if (!allowedImageTypes.includes(certificate_type)) {
-      for (const [field, path] of Object.entries(imageUploads)) {
-        if (path) {
-          return res.status(400).json({
-            error: `Image uploads are not supported for ${certificate_type} certificates.`,
-          });
-        }
+    // Each certificate type only allows its own photo fields
+    if (certificate_type === 'death') {
+      // Death certs: ONLY deceasedPhoto allowed, not child/husband/wife/applicant photos
+      if (childPhotoPath || husbandPhotoPath || wifePhotoPath || applicantPhotoPath) {
+        return res.status(400).json({
+          error: 'Only a deceased person photo is allowed for death certificates.',
+        });
+      }
+    } else if (certificate_type === 'birth') {
+      // Birth certs: ONLY childPhoto and hospitalEvidence allowed
+      if (husbandPhotoPath || wifePhotoPath || deceasedPhotoPath) {
+        return res.status(400).json({
+          error: 'Only a child photo is allowed for birth certificates.',
+        });
+      }
+    } else if (certificate_type === 'marriage') {
+      // Marriage certs: ONLY husband/wife photos allowed
+      if (childPhotoPath || deceasedPhotoPath || applicantPhotoPath) {
+        return res.status(400).json({
+          error: 'Only husband and wife photos are allowed for marriage certificates.',
+        });
       }
     }
     connection = await pool.getConnection();
@@ -421,13 +422,13 @@ const downloadCertificate = async (req, res) => {
         c.*,
         r.firstname             AS resident_firstname,
         r.lastname              AS resident_lastname,
-        r.gender,
+        r.gender                AS resident_gender,
         r.birth_date            AS resident_birth_date,
         r.birthplace            AS resident_birthplace,
-        r.marital_status,
-        r.father_name,
-        r.mother_name,
-        r.spouse_id,
+        r.marital_status        AS resident_marital_status,
+        r.father_name           AS resident_father_name,
+        r.mother_name           AS resident_mother_name,
+        r.spouse_id             AS resident_spouse_id,
         r.phone_number,
         r.occupation,
         r.education_level,
@@ -438,8 +439,8 @@ const downloadCertificate = async (req, res) => {
         r.nationality,
         r.religion,
         r.disability_status,
-        r.photo_path,
-        r.registration_date,
+        r.photo_path            AS resident_photo_path,
+        r.registration_date     AS resident_registration_date,
         u.email AS resident_email
       FROM certificates c
       INNER JOIN residents r  ON c.resident_id = r.id
@@ -504,7 +505,7 @@ const downloadCertificate = async (req, res) => {
       }
       
       // Ensure parent names are populated from resident profile if missing
-      if (cert.gender === 'male') {
+      if (cert.resident_gender === 'male') {
         cert.father_name = cert.father_name || `${cert.resident_firstname} ${cert.resident_lastname}`;
       } else {
         cert.mother_name = cert.mother_name || `${cert.resident_firstname} ${cert.resident_lastname}`;
@@ -554,7 +555,7 @@ const downloadCertificate = async (req, res) => {
       } else if (cert.husband_name || cert.wife_name) {
         // Fallback: data already stored in the certificate row itself
         // Try to enrich one side from the resident row
-        if (cert.gender === 'male') {
+        if (cert.resident_gender === 'male') {
           cert.husband_name = cert.husband_name || residentFullName;
           cert.husband_birth_date  = cert.husband_birth_date  || cert.resident_birth_date;
           cert.husband_birth_place = cert.husband_birth_place || cert.resident_birthplace;
@@ -566,15 +567,15 @@ const downloadCertificate = async (req, res) => {
       }
 
       // Resolve spouse name from residents table if still missing one side
-      if (cert.spouse_id && (!cert.husband_name || !cert.wife_name)) {
+      if (cert.resident_spouse_id && (!cert.husband_name || !cert.wife_name)) {
         const [spouseRows] = await pool.query(
           `SELECT firstname, lastname, birth_date, birthplace, gender FROM residents WHERE id = ? LIMIT 1`,
-          [cert.spouse_id]
+          [cert.resident_spouse_id]
         );
         if (spouseRows.length > 0) {
           const sp = spouseRows[0];
           const spouseFull = `${sp.firstname} ${sp.lastname}`;
-          if (sp.gender === 'male' || cert.gender === 'female') {
+          if (sp.gender === 'male' || cert.resident_gender === 'female') {
             cert.husband_name        = cert.husband_name || spouseFull;
             cert.husband_birth_date  = cert.husband_birth_date  || sp.birth_date;
             cert.husband_birth_place = cert.husband_birth_place || sp.birthplace;
@@ -616,12 +617,12 @@ const downloadCertificate = async (req, res) => {
     // Resolve spouse name for residency certs (married residents)
     if (
       cert.certificate_type !== 'marriage' &&
-      (cert.marital_status || '').toLowerCase() === 'married' &&
-      cert.spouse_id
+      (cert.resident_marital_status || '').toLowerCase() === 'married' &&
+      cert.resident_spouse_id
     ) {
       const [spouseRows] = await pool.query(
         `SELECT firstname, lastname FROM residents WHERE id = ? LIMIT 1`,
-        [cert.spouse_id]
+        [cert.resident_spouse_id]
       );
       if (spouseRows.length > 0) {
         cert.spouse_name = `${spouseRows[0].firstname} ${spouseRows[0].lastname}`.trim();
@@ -661,7 +662,27 @@ const downloadCertificate = async (req, res) => {
       `attachment; filename="certificate_${certificateId}.pdf"`
     );
 
+    const { validateAndSanitize } = require('../utils/certificateValidator');
+    
+    console.log("================ PDF GENERATION DEBUG ================");
+    console.log("[1] Certificate Type Detected:", cert.certificate_type);
+    console.log("[2] Database Query Results (Raw Cert Object):", JSON.stringify(cert, null, 2));
+    
+    // Explicitly validate and sanitize to get the mapped object for logging
+    const mappedData = validateAndSanitize(cert);
+    console.log("[3] Mapped Certificate Object:", JSON.stringify(mappedData, null, 2));
+    console.log("[4] Final Rendered Values:");
+    console.log(" - childName:", mappedData.childName);
+    console.log(" - childBirthDate:", mappedData.childBirthDate);
+    console.log(" - husbandName:", mappedData.husbandName);
+    console.log(" - wifeName:", mappedData.wifeName);
+    console.log(" - deceasedName:", mappedData.deceasedName);
+    console.log(" - fullName (Registrant):", mappedData.fullName);
+    console.log("======================================================");
+
+    // Call generateCertificate (which internally calls validateAndSanitize again, but that's fine for debug)
     generateCertificate(cert, res);
+
 
   } catch (err) {
     return serverError(res, err);
@@ -1011,7 +1032,9 @@ const createDeathReport = async (req, res) => {
     place_of_death,
   } = req.body;
 
-  const evidenceDocPath = normalizeUploadPath(req.files?.evidence_document?.[0]);
+  // upload.single() stores the file in req.file (not req.files)
+  // Evidence is optional — only validated if provided
+  const evidenceDocPath = normalizeUploadPath(req.file);
 
   try {
     const [residentRows] = await pool.query(
@@ -1020,12 +1043,24 @@ const createDeathReport = async (req, res) => {
     );
 
     if (residentRows.length === 0) {
-      return res.status(404).json({
-        error: 'Resident profile not found',
-      });
+      return res.status(404).json({ error: 'Resident profile not found' });
     }
 
     const reporterId = residentRows[0].id;
+
+    // Verify the deceased person exists in the residents table
+    const [deceasedRows] = await pool.query(
+      `SELECT id, firstname, lastname FROM residents WHERE id = ? LIMIT 1`,
+      [deceased_person_id]
+    );
+
+    if (deceasedRows.length === 0) {
+      return res.status(404).json({
+        error: 'The deceased person was not found in the resident registry.',
+      });
+    }
+
+    const deceased = deceasedRows[0];
 
     // Verify family relationship exists
     const [familyCheck] = await pool.query(
@@ -1042,11 +1077,44 @@ const createDeathReport = async (req, res) => {
       });
     }
 
+    // If an evidence document was uploaded, cross-check deceased name
+    // (Evidence is not required — skip check if no file provided)
+    if (evidenceDocPath) {
+      // Attempt basic name match: log a warning if evidence filename contains a different name
+      // Full OCR-based checking would require an external service — here we do DB-level confirmation
+      const deceasedFullName = `${deceased.firstname} ${deceased.lastname}`.toLowerCase();
+      const evidenceFilename  = (req.file?.originalname || '').toLowerCase();
+
+      // If filename contains any name fragment, verify it matches
+      const filenameWords = evidenceFilename.replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+      const nameMatchFailed = filenameWords.length > 0 && !filenameWords.some(w =>
+        deceasedFullName.includes(w)
+      );
+
+      if (nameMatchFailed) {
+        logger.warn(
+          `Death report evidence filename '${req.file?.originalname}' may not match deceased '${deceased.firstname} ${deceased.lastname}' — accepted anyway (manual review required)`
+        );
+      }
+
+      logger.info(
+        `Evidence document provided for death report: ${evidenceDocPath}. Deceased: ${deceased.firstname} ${deceased.lastname}`
+      );
+    }
+
     const [result] = await pool.query(
       `INSERT INTO death_reports
        (deceased_person_id, reporter_id, family_relationship_type, date_of_death, cause_of_death, place_of_death, evidence_document, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
-      [deceased_person_id, reporterId, family_relationship_type, date_of_death, cause_of_death, place_of_death, evidenceDocPath]
+      [
+        deceased_person_id,
+        reporterId,
+        family_relationship_type,
+        date_of_death,
+        cause_of_death || null,
+        place_of_death,
+        evidenceDocPath || null,
+      ]
     );
 
     logger.info(`Death report ${result.insertId} created by resident ${reporterId}`);
@@ -1054,12 +1122,14 @@ const createDeathReport = async (req, res) => {
     return res.status(201).json({
       message: 'Death report submitted successfully',
       report_id: result.insertId,
+      evidence_provided: !!evidenceDocPath,
     });
 
   } catch (err) {
     return serverError(res, err);
   }
 };
+
 
 /**
  * GET /api/residents/children

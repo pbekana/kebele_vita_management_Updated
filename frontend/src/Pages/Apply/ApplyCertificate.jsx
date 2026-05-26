@@ -324,8 +324,8 @@ const ApplyCertificate = () => {
           return;
         }
         if (Array.isArray(value)) {
-          value.forEach((item, index) => {
-            payload.append(`documents[${index}]`, item.file);
+          value.forEach((item) => {
+            payload.append('documents', item.file);
           });
           return;
         }

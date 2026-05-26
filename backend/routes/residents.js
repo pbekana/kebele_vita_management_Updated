@@ -119,18 +119,24 @@ const upload = multer({
     },
   }),
   fileFilter: (req, file, cb) => {
-    const imageTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+    const imageTypes    = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
     const documentTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
 
-    if (file.fieldname === 'hospitalEvidence') {
+    // hospitalEvidence, generic documents, and evidence_document (death report) all allow PDF + images
+    if (
+      file.fieldname === 'hospitalEvidence' ||
+      file.fieldname === 'documents' ||
+      file.fieldname === 'evidence_document'
+    ) {
       if (!documentTypes.includes(file.mimetype)) {
-        return cb(new Error('Only PDF or image files are allowed for hospital evidence.'));
+        return cb(new Error('Only PDF or image files are allowed for document uploads.'));
       }
       return cb(null, true);
     }
 
+    // All other photo fields (childPhoto, deceasedPhoto, etc.) — images only
     if (!imageTypes.includes(file.mimetype)) {
-      return cb(new Error('Only image uploads are allowed')); 
+      return cb(new Error('Only image uploads are allowed for photo fields'));
     }
     cb(null, true);
   },
@@ -152,12 +158,13 @@ router.get('/profile', getProfile);
 router.post(
   '/certificates/request',
   upload.fields([
-    { name: 'childPhoto', maxCount: 1 },
-    { name: 'husbandPhoto', maxCount: 1 },
-    { name: 'wifePhoto', maxCount: 1 },
-    { name: 'deceasedPhoto', maxCount: 1 },
-    { name: 'applicantPhoto', maxCount: 1 },
-    { name: 'hospitalEvidence', maxCount: 1 },
+    { name: 'childPhoto',      maxCount: 1 },
+    { name: 'husbandPhoto',    maxCount: 1 },
+    { name: 'wifePhoto',       maxCount: 1 },
+    { name: 'deceasedPhoto',   maxCount: 1 },
+    { name: 'applicantPhoto',  maxCount: 1 },
+    { name: 'hospitalEvidence',maxCount: 1 },
+    { name: 'documents',       maxCount: 5 },  // Supporting documents (PDF or images)
   ]),
   [
     body('certificate_type')

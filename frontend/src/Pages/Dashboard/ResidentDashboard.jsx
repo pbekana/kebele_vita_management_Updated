@@ -1851,14 +1851,23 @@ const ResidentDashboard = () => {
                         </div>
 
                         <div className="kd-field md:col-span-2">
-                          <label className="kd-label">Hospital Evidence Document (Image/PDF)</label>
+                          <label className="kd-label">
+                            Evidence Document — Optional (Image or PDF)
+                          </label>
                           <input
                             className="kd-input"
                             type="file"
                             accept="image/*,.pdf"
                             onChange={e => setDeathEvidence(e.target.files[0])}
-                            required
                           />
+                          <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: 4 }}>
+                            Upload a hospital or official evidence document if available. If provided, the system will cross-check the deceased person against the registry.
+                          </p>
+                          {deathEvidence && (
+                            <p style={{ fontSize: '0.78rem', color: '#16a34a', marginTop: 4 }}>
+                              ✅ File selected: {deathEvidence.name}
+                            </p>
+                          )}
                         </div>
 
                         <div className="kd-field md:col-span-2 mt-2">

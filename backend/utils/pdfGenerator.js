@@ -33,7 +33,7 @@ function fmtDate(val) {
   return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 }
 function s(v) {
-  if (v === null || v === undefined || v === '' || v === '—' || v === 'null' || v === 'undefined') return '—';
+  if (v === null || v === undefined || v === '' || v === '—' || v === '-' || v === 'null' || v === 'undefined') return '-';
   return String(v);
 }
 
